@@ -2,13 +2,15 @@
 use sqlx::FromRow;
 use futures::TryStreamExt;
 use crate::PersonView;
+use strfmt::strfmt;
+use std::collections::HashMap;
 
 const QUERY_LOGIN: &'static str = r"
 WITH pview AS
 ( 
     SELECT * 
     FROM personview
-    WHERE login LIKE $1
+    WHERE login {comparison} $1
 )
 SELECT row_to_json(ln2) as personview from (
     SELECT DISTINCT ON (person_id) *  
@@ -30,7 +32,7 @@ WITH pview AS
 ( 
     SELECT * 
     FROM personview
-    WHERE fullname ILIKE $1
+    WHERE fullname {comparison} $1
 )
 SELECT row_to_json(ln2) as personview from (
 SELECT DISTINCT ON (person_id) *  
@@ -112,20 +114,59 @@ impl QueryParam {
     }
 }
 
-
-pub async fn query(pool: &sqlx::PgPool, name: Option<String>, login: Option<String>) -> Result<Vec<PersonView>, sqlx::Error> {
-    let (query,binding) = if let Some(name) = name {
-        ( QUERY_NAME, name)
-    } else if let Some(login) = login {
-        (QUERY_LOGIN, login) 
-    } else {
-        panic!("Should not reach here")
+/// Given a reference to the PgPool and a QueryParam instance, look up the 
+/// matching PersonView instances.
+pub async fn query(pool: &sqlx::PgPool, param: QueryParam) -> Result<Vec<PersonView>, sqlx::Error> {
+    let mut lookup = HashMap::new();
+    let (query, binding) = match param {
+        QueryParam::Name(name, mode) => {
+            match mode {
+                QueryMode::ILike => {
+                    lookup.insert("comparison".into(), "ILIKE");
+                    let query_name = strfmt(QUERY_NAME, &lookup).unwrap();
+                    let name = format!("%{}%", name);
+                    (query_name, name)
+                },
+                QueryMode::Like => {
+                    lookup.insert("comparison".into(), "LIKE");
+                    let query_name = strfmt(QUERY_NAME, &lookup).unwrap();
+                    let name = format!("%{}%", name);
+                    (query_name, name)
+                },
+                QueryMode::Exact => {
+                    lookup.insert("comparison".into(), "=");
+                    let query_name = strfmt(QUERY_NAME, &lookup).unwrap();
+                    (query_name, name)
+                },
+            }
+        }
+        QueryParam::Login(login, mode) => {
+            match mode {
+                QueryMode::ILike => {
+                    lookup.insert("comparison".into(), "ILIKE");
+                    let query_login = strfmt(QUERY_LOGIN, &lookup).unwrap();
+                    let login = format!("%{}%", login);
+                    (query_login, login)
+                },
+                QueryMode::Like => {
+                    lookup.insert("comparison".into(), "LIKE");
+                    let query_login = strfmt(QUERY_LOGIN, &lookup).unwrap();
+                    let login = format!("%{}%", login);
+                    (query_login, login)
+                },
+                QueryMode::Exact => {
+                    lookup.insert("comparison".into(), "=");
+                    let query_login = strfmt(QUERY_LOGIN, &lookup).unwrap();
+                    (query_login, login)
+                },
+            }
+        }
     };
+    
     let mut rval = Vec::new();
-    let binding = format!("%{}%", binding);
-    let mut rows = sqlx::query(query)
-    .bind(binding)
-    .fetch(pool);
+    let mut rows = sqlx::query(&query)
+                    .bind(binding)
+                    .fetch(pool);
     while let Some(row) = rows.try_next().await? {
         let JasonAdapter{personview} =JasonAdapter::from_row(&row).unwrap();   
         let person: PersonView = serde_json::from_value(personview).unwrap();
