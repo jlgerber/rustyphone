@@ -1,3 +1,21 @@
+
+----------------
+-- DEPARTMENT --
+----------------
+CREATE TABLE IF NOT EXISTS department
+(
+id  SERIAL   PRIMARY KEY,
+name VARCHAR(256) NOT NULL UNIQUE
+);
+---------------
+--   TITLE   --
+---------------
+CREATE TABLE IF NOT EXISTS title
+(
+id SERIAL PRIMARY KEY,
+name VARCHAR(256) NOT NULL UNIQUE
+);
+
 ------------------
 -- PERSON TABLE --
 ------------------
@@ -7,14 +25,17 @@ CREATE TABLE IF NOT EXISTS person
     first  VARCHAR(256) NOT NULL,
     last   VARCHAR(256) NOT NULL,
     login  VARCHAR(256) NOT NULL UNIQUE,
-        UNIQUE(first, last)
-) ;
+    department_id INT NOT NULL,
+    title_id INT NOT NULL,
+    UNIQUE(first, last),
+    CONSTRAINT fk_department
+        FOREIGN KEY(department_id)
+            REFERENCES department(id),
+    CONSTRAINT fk_title
+        FOREIGN KEY(title_id)
+            REFERENCES title(id)
 
-----------------
--- DEPARTMENT --
-----------------
--- CREATE TABLE IF NOT EXISTS department
--- id  SERIAL   PRIMARY KEY,
+) ;
 
 -------------------
 -- LOCATION TYPE --
@@ -66,17 +87,38 @@ CREATE TABLE IF NOT EXISTS people_phones
 -- PERSONVIEW VIEW --
 ---------------------
 CREATE OR REPLACE VIEW personview AS
-SELECT p.id AS person_id, p.first, p.last, p.login,
-       ph.id AS phone_id, ph.number, ph.category, ph.location
- FROM person p,phone ph,people_phones 
-WHERE people_phones.person_id=p.id 
-  AND people_phones.phone_id=ph.id;
+SELECT 
+    p.id AS person_id, 
+    p.first, 
+    p.last, 
+    p.first || ' ' || p.last as fullname, 
+    p.login,
+    dept.name as department,
+    title.name as title,
+    ph.id AS phone_id, 
+    ph.number, 
+    ph.category, 
+    ph.location
+ FROM 
+    person p,
+    title,
+    department dept,
+    phone ph,
+    people_phones
+WHERE 
+    people_phones.person_id=p.id 
+AND 
+    people_phones.phone_id=ph.id
+AND
+    department_id = dept.id
+AND
+    title_id = title.id;
 
 
 -----------------------
 -- ADDPHONE FUNCTION --
 -----------------------
-CREATE OR REPLACE FUNCTION addPhone(
+CREATE OR REPLACE FUNCTION addPhone (
     login varchar, 
     number text, 
     category phonecategory, 
@@ -97,6 +139,43 @@ BEGIN
       INTO people_phones (person_id, phone_id)
     SELECT X.id, Y.id 
       FROM X CROSS JOIN Y;
+    RETURN 1;
+END;
+$$
+Language 'plpgsql';
+
+
+CREATE OR REPLACE FUNCTION addPerson(
+    first varchar, 
+    last varchar,
+    login varchar,
+    department varchar,
+    title varchar
+    
+) RETURNS int AS $$
+
+BEGIN
+    WITH cte_title AS (
+    SELECT
+        id
+    FROM
+        title
+    WHERE
+        name = addPerson.title
+    
+),
+      cte_dept AS (
+        SELECT
+            id
+        FROM
+          department
+        WHERE
+            name = addPerson.department
+)
+INSERT INTO 
+    person (first, last, login, department_id, title_id)
+VALUES
+    (addPerson.first, addPerson.last, addPerson.login, (SELECT id FROM cte_dept), ( SELECT id FROM cte_title));
     RETURN 1;
 END;
 $$

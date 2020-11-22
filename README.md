@@ -97,3 +97,166 @@ SELECT row_to_json(ln) AS personview
          FROM pview AS pv
        ) AS ln;
 ```
+
+# Population
+
+```sql
+INSERT INTO 
+    department(name) 
+VALUES 
+    ('Features'),
+    ('Features Billable'), 
+    ('Vancouver Artists'),
+    ('Vancouver Software'),
+    ('Playa Artists'), 
+    ('Playa Software'),
+    ('Mt Employees'), 
+    ('Mt Software'),
+    ('DDIndia'),
+    ('NORMAL ACCOUNT'), 
+    ('Software Development Management'), 
+    ('Technical Directors'), 
+    ('Supervisors'),
+    ('Dfx Supervisors'),
+    ('Virtual Reality');
+
+INSERT INTO 
+    title(name)
+VALUES 
+    ('Lighting Artist'), 
+    ('Compositor'),
+    ('Digital Artist'),
+    ('Animator'),
+    ('Paint Artist'),
+    ('Coordinator'),
+    ('Management'),
+    ('Assistant Controller'),
+    ('Stage Lead'),
+    ('External Contractor'),
+    ('Engineer, Software'),
+    ('Effects Technical Director'),
+    ('Unity Developer'),
+    ('Senior Producer'),
+    ('Supervisor, Integration'),
+    ('Supervisor, Rotoscope'),
+    ('Supervisor, Modeling'),
+    ('Character Fx Supervisor'),
+    ('Supervisor, Computer Graphics'),
+    ('Supervisor, Visual Effects'),
+    ('Supervisor, Pipeline'),
+    ('Environments Department Supervisor'),
+    ('Lighting Department Supervisor'),
+    ('Fx Department Supervisor'),
+    ('Animation Director'),
+    ('Directory, Technology'),
+    ('Director of Software R&D'),
+    ('Director');
+
+```
+
+```sql
+
+WITH cte_title AS (
+    SELECT
+        id
+    FROM
+        title
+    WHERE
+        name = 'Supervisor, Integration'
+    
+),
+      cte_dept AS (
+        SELECT
+            id
+        FROM
+          department
+        WHERE
+            name = 'Supervisors'
+)
+INSERT INTO 
+    person (first, last, login, department_id, title_id)
+VALUES
+    ('Som', 'Shankar', 'som', (SELECT id FROM cte_dept), ( SELECT id FROM cte_title));
+```
+
+## aggregating all phones into array
+
+This returns all json
+
+```sql
+WITH pview AS
+    ( 
+        SELECT * 
+        FROM personview
+        WHERE fullname ILIKE 'sam%'
+    )
+    SELECT row_to_json(ln2) as pv2 from (
+    SELECT DISTINCT ON (person_id) *  
+    FROM ( SELECT pv.person_id, pv.first, pv.last, pv.login,
+            ( SELECT json_agg(rowval) AS phones 
+                FROM 
+                    ( SELECT phone_id, number, category, location 
+                        FROM pview 
+                        WHERE person_id = pv.person_id
+                    ) 
+                rowval
+            ) 
+            FROM pview AS pv
+        ) AS ln
+    ) AS ln2;
+```
+
+whereas this turns the phone into an array of json
+
+```sql
+WITH pview AS
+    ( 
+        SELECT * 
+        FROM personview
+        WHERE fullname ILIKE 'sam%'
+    )
+    SELECT DISTINCT ON (person_id) *  
+    FROM ( SELECT pv.person_id, pv.first, pv.last, pv.login,
+        ( SELECT json_agg(rowval) AS phones 
+            FROM 
+                ( SELECT phone_id, number, category, location 
+                    FROM pview 
+                    WHERE person_id = pv.person_id
+                ) 
+            rowval
+        ) 
+        FROM pview AS pv
+    ) AS ln;
+```
+
+# Examples of sqlx usage from query.rs
+This crate was initally just a way of exploring sqlx.
+These are examples of using different query strategies.
+
+```rust
+
+pub async fn using_fetch_all(pool: &sqlx::PgPool, fields: &str, age_q: i16, sex: &str) -> Result<(),sqlx::Error> {
+    let select = format!("SELECT {} FROM person where age>$1 and sex=$2",fields);
+    let  names = sqlx::query_as::<_,Person>(&select)
+    .bind(age_q)
+    .bind(sex)
+    .fetch_all(pool).await?;
+    
+    println!("{:#?}", names);
+    Ok(())
+}
+
+pub async fn using_query(pool: &sqlx::PgPool, fields: &str, age_q: i16, sex: &str) -> Result<(), sqlx::Error> {
+    let select = format!("SELECT {} FROM person where age>$1 and sex=$2",fields);
+    let mut rows = sqlx::query(&select)
+    .bind(age_q)
+    .bind(sex)
+    .fetch(pool);
+    while let Some(row) = rows.try_next().await? {
+        let person = Person::from_row(&row).unwrap();   
+        print_person(&person);
+    
+    }
+    Ok(())
+}
+```

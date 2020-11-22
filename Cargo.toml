@@ -7,11 +7,11 @@ edition = "2018"
 
 [[bin]]
 name = "client"
-path = "src/main.rs"
+path = "src/bin/main.rs"
 
 [[bin]]
 name = "server"
-path = "src/migrate.rs"
+path = "src/bin/migrate.rs"
 
 [dependencies]
 sqlx = { version = "0.4.1", features = [ "json","postgres", "runtime-async-std-native-tls", "migrate"] }
@@ -19,3 +19,4 @@ async-std = { version = "1.7.0", features = ["attributes"] }
 futures = "0.3.8"
 serde = "1.0.117"
 serde_json = "1.0.59"
+structopt = "0.3.20"
