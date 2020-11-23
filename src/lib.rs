@@ -1,12 +1,13 @@
 mod utils;
 mod constants;
+pub mod create;
 mod location;
 mod mode;
 mod person;
 mod person_select;
 mod person_view;
 mod phone;
-mod query;
+pub mod read;
 mod traits;
 
 pub use constants::*;
@@ -16,7 +17,7 @@ pub use person::Person;
 pub use person_select::PersonSelect;
 pub use person_view::PersonView;
 pub use phone::Phone;
-pub use query::*;
+pub use read::QueryParam;
 pub use traits::Selectable;
 pub use utils::{print_person};
 

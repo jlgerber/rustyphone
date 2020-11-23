@@ -1,7 +1,7 @@
 
 use sqlx::FromRow;
 use futures::TryStreamExt;
-use crate::PersonView;
+//use crate::PersonView;
 use strfmt::strfmt;
 use std::collections::HashMap;
 
@@ -15,11 +15,16 @@ WITH pview AS
 SELECT row_to_json(ln2) as personview from (
     SELECT DISTINCT ON (person_id) *  
     FROM ( SELECT pv.person_id, pv.first, pv.last, pv.login, pv.fullname,
-            ( SELECT json_agg(rowval) AS phones 
-                FROM 
+            ( SELECT 
+                json_agg(rowval) AS phones 
+              FROM 
                     ( SELECT phone_id, number, category, location 
-                        FROM pview 
-                        WHERE person_id = pv.person_id
+                        FROM 
+                            pview 
+                        WHERE 
+                            person_id = pv.person_id
+                        AND
+                            pv.phone_id IS NOT NULL
                     ) 
                 rowval
             ) 
@@ -39,9 +44,14 @@ SELECT DISTINCT ON (person_id) *
 FROM ( SELECT pv.person_id, pv.first, pv.last, pv.login, pv.fullname,
         ( SELECT json_agg(rowval) AS phones 
             FROM 
-                ( SELECT phone_id, number, category, location 
-                    FROM pview 
-                    WHERE person_id = pv.person_id
+                ( SELECT 
+                        phone_id, number, category, location 
+                  FROM 
+                        pview 
+                  WHERE 
+                        person_id = pv.person_id
+                  AND
+                        pv.phone_id IS NOT NULL
                 ) 
             rowval
         ) 
@@ -70,6 +80,11 @@ pub enum QueryMode {
     Exact
 }
 
+#[derive(PartialEq, Eq, Debug)]
+pub enum QueryField {
+    Name, 
+    Login
+}
 /// Provides a tuple of query,mode 
 #[derive(PartialEq, Eq, Debug)]
 pub enum QueryParam {
@@ -78,6 +93,14 @@ pub enum QueryParam {
 }
 
 impl QueryParam {
+    /// Given a vaule, field, and mode, create a new QueryParam
+    pub fn new<I:Into<String>>(value: I, field: QueryField, mode: QueryMode) -> Self {
+        match field {
+           QueryField::Name => QueryParam::Name(value.into(), mode),
+            QueryField::Login => Self::Login(value.into(), mode)
+        }
+    }
+
     /// Given a name, construct a param which expects to match any string
     /// which contains the name, irrespective of case.
     pub fn ilike_name<I:Into<String>>(name: I) -> Self {
@@ -115,8 +138,8 @@ impl QueryParam {
 }
 
 /// Given a reference to the PgPool and a QueryParam instance, look up the 
-/// matching PersonView instances.
-pub async fn query(pool: &sqlx::PgPool, param: QueryParam) -> Result<Vec<PersonView>, sqlx::Error> {
+/// matching values in the db and return a vector of json objects.
+pub async fn personview(pool: &sqlx::PgPool, param: QueryParam) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     let mut lookup = HashMap::new();
     let (query, binding) = match param {
         QueryParam::Name(name, mode) => {
@@ -169,8 +192,9 @@ pub async fn query(pool: &sqlx::PgPool, param: QueryParam) -> Result<Vec<PersonV
                     .fetch(pool);
     while let Some(row) = rows.try_next().await? {
         let JasonAdapter{personview} =JasonAdapter::from_row(&row).unwrap();   
-        let person: PersonView = serde_json::from_value(personview).unwrap();
-        rval.push(person);
+        //let person: PersonView = serde_json::from_value(personview).unwrap();
+        //rval.push(person);
+        rval.push(personview);
     
     }
     Ok(rval)

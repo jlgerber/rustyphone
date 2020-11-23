@@ -87,32 +87,38 @@ CREATE TABLE IF NOT EXISTS people_phones
 -- PERSONVIEW VIEW --
 ---------------------
 CREATE OR REPLACE VIEW personview AS
+WITH cte_pf AS (
+   SELECT pp.*,ph.number,ph.category,ph.location
+   FROM
+      people_phones AS pp
+   JOIN phone as ph ON pp.phone_id = ph.id
+)
 SELECT 
     p.id AS person_id, 
     p.first, 
     p.last, 
-    p.first || ' ' || p.last as fullname, 
+    p.first || ' ' || p.last AS fullname, 
     p.login,
-    dept.name as department,
-    title.name as title,
-    ph.id AS phone_id, 
-    ph.number, 
-    ph.category, 
-    ph.location
- FROM 
-    person p,
-    title,
-    department dept,
-    phone ph,
-    people_phones
-WHERE 
-    people_phones.person_id=p.id 
-AND 
-    people_phones.phone_id=ph.id
-AND
-    department_id = dept.id
-AND
-    title_id = title.id;
+    dept.name AS department,
+    title.name AS title,
+    cte_pf.phone_id, 
+    cte_pf.number, 
+    cte_pf.category, 
+    cte_pf.location
+FROM 
+    person p
+JOIN 
+    title 
+ON 
+    p.title_id = title.id
+JOIN 
+    department AS dept 
+ON 
+    p.department_id=dept.id
+LEFT JOIN 
+    cte_pf 
+ON 
+    p.id = cte_pf.person_id;
 
 
 -----------------------

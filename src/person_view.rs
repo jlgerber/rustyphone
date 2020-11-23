@@ -9,5 +9,5 @@ pub struct PersonView {
     last: String,
     fullname: String,
     login: String,
-    phones: Vec<Phone>
+    phones: Option<Vec<Phone>>
 }
