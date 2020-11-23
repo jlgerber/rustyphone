@@ -1,12 +1,14 @@
-use sqlx::postgres::PgPoolOptions;
 use async_std;
-
+#[macro_use] extern crate prettytable;
+use prettytable::{Table, Row, Cell, format};
+use sqlx::postgres::PgPoolOptions;
+use structopt::StructOpt;
+// internal
 use userdb::read;
 use userdb::create;
 use userdb::DB_URL;
 use userdb::QueryParam;
 use userdb::PersonView;
-use structopt::StructOpt;
 
 
 #[derive(StructOpt, Debug)]
@@ -44,6 +46,86 @@ enum Opt {
     }
 }
 
+#[derive(Debug)]
+struct PhoneRow {
+    pub ext: Option<String>,
+    pub home: Option<String>,
+    pub pager: Option<String>,
+    pub cell: Option<String>,
+    pub location: Option<String>
+}
+
+impl Default for PhoneRow {
+    fn default() -> Self {
+        Self {
+            ext: None,
+            home:None,
+            pager: None,
+            cell: None,
+            location: None
+        }
+    }
+}
+
+
+impl PhoneRow {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    // pub fn row(&self) -> Row {
+    //     let Self{ext, home, pager, cell, location} = self;
+    //     let mut row = Vec::new();
+       
+    //     row.push(format_phone(ext, "Ext"));
+    //     row.push(format_phone(home, "H"));
+    //     row.push(format_phone(pager, "P"));
+    //     row.push(format_phone(cell, "C"));
+    //     match location {
+    //         Some(loc) => row.push(Cell::new(&format!("Loc: {}", loc))),
+    //         None => row.push(Cell::new("Loc:"))
+    //     };
+    //     Row::new(row)
+    // }
+    pub fn row1(&self) -> Row {
+        let Self{ext, home,..} = self;
+        let mut row = Vec::new();
+       
+        row.push(format_phone(ext, "Ext"));
+        row.push(format_phone(home, "H"));
+       // row.push(format_phone(pager, "P"));
+        
+        Row::new(row)
+    }
+    pub fn row2(&self) -> Row {
+        let Self{pager, cell, location,..} = self;
+        let mut row = Vec::new();
+        row.push(format_phone(pager, "P"));
+        row.push(format_phone(cell, "C"));
+        match location {
+            Some(loc) => row.push(Cell::new(&format!("Loc: {}", loc))),
+            None => row.push(Cell::new("Loc:"))
+        };
+        Row::new(row)
+    }
+}
+
+fn format_phone(num: &Option<String>, label: &str) -> Cell {
+    if num.is_some() {
+        
+        let num = num.as_deref().unwrap();
+        let ccnt = num.chars().count();
+        if ccnt == 7 {
+            // assuming ascii numbers
+            Cell::new(&format!("{}: {}-{}-{}",label,&num[..3], &num[3..6], &num[6..] ))
+        } else {
+            Cell::new(&format!("{}: {}", label, num))
+        }
+    } else {
+        Cell::new(&format!("{}:     ", label))
+    }
+}
+
 async fn process_read(name: Option<String>, login: Option<String>) -> Result<(),sqlx::Error> {
     // verify that either name or login is set
     if name.is_none() && login.is_none() {
@@ -58,9 +140,12 @@ async fn process_read(name: Option<String>, login: Option<String>) -> Result<(),
     // build out the query param, assuming that if name is set,
     // then login is not set
     let query_param = if name.is_some() {
-        QueryParam::ilike_name(name.unwrap())
+        //QueryParam::ilike_name(name.unwrap())
+        QueryParam::new(name.unwrap(), read::QueryField::Name, read::QueryMode::ILike)
     } else {
-        QueryParam::ilike_login(login.unwrap())
+        //QueryParam::ilike_login(login.unwrap())
+        QueryParam::new(login.unwrap(), read::QueryField::Login, read::QueryMode::ILike)
+
     };
     // construct a connection pool to the db
     let  pool = PgPoolOptions::new()
@@ -68,11 +153,40 @@ async fn process_read(name: Option<String>, login: Option<String>) -> Result<(),
         .connect(DB_URL).await?;
         
     let results = read::personview(&pool,query_param).await?;
-    println!("Result Cnt: {}", results.len());
     for result in results {
         let person: PersonView = serde_json::from_value(result).unwrap();
-        //rval.push(person);
-        println!("{:#?}", person);
+        let mut table = Table::new();
+        table.set_format(*format::consts::FORMAT_CLEAN);
+        let mut table_r1 = Table::new();
+        let mut table_r2 = Table::new();
+        table_r1.set_format(*format::consts::FORMAT_CLEAN);
+        table_r2.set_format(*format::consts::FORMAT_CLEAN);
+
+        table.add_row(row![format!(" User: {}",person.login), format!("Full Name: {}",person.fullname)]);
+        table.add_row(row![format!(" Dept: {}", person.department), format!("Title: {}", person.title)]);
+        match person.phones {
+            None => {
+                table.add_row(row![" Ext:     H:       ","P:       C:       Loc:       "]);
+            },
+            Some(phones) => {
+                let mut phonerow = PhoneRow::new();
+                for phone in phones {
+                    match phone.category.as_ref() {
+                        "home" => phonerow.home = Some(phone.number.clone()),
+                        "extension" | "ext" => phonerow.ext = Some(phone.number.clone()),
+                        "cell" => phonerow.cell = Some(phone.number.clone()),
+                        _ => ()
+                    }
+                    phonerow.location = Some(phone.location.clone());
+                }
+                table_r1.add_row(phonerow.row1());
+                table_r2.add_row(phonerow.row2());
+                table.add_row(row![table_r1.to_string(), table_r2.to_string()]);
+            }
+        }
+        table.printstd();
+        println!("");
+       
     }
     Ok(())
 }

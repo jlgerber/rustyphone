@@ -14,7 +14,7 @@ WITH pview AS
 )
 SELECT row_to_json(ln2) as personview from (
     SELECT DISTINCT ON (person_id) *  
-    FROM ( SELECT pv.person_id, pv.first, pv.last, pv.login, pv.fullname,
+    FROM ( SELECT pv.person_id, pv.first, pv.last, pv.login, pv.fullname, pv.department, pv.title,
             ( SELECT 
                 json_agg(rowval) AS phones 
               FROM 
@@ -41,7 +41,7 @@ WITH pview AS
 )
 SELECT row_to_json(ln2) as personview from (
 SELECT DISTINCT ON (person_id) *  
-FROM ( SELECT pv.person_id, pv.first, pv.last, pv.login, pv.fullname,
+FROM ( SELECT pv.person_id, pv.first, pv.last, pv.login, pv.fullname, pv.department, pv.title,
         ( SELECT json_agg(rowval) AS phones 
             FROM 
                 ( SELECT 
@@ -79,13 +79,23 @@ pub enum QueryMode {
     Like,
     Exact
 }
-
+impl QueryMode {
+    /// Return the comparsion operator as a static str 
+    pub fn comparison(&self) -> &'static str {
+        match self {
+            &Self::ILike => "ILIKE",
+            &Self::Like => "LIKE",
+            &Self::Exact => "=",
+        }
+    }
+}
+/// The type of field which we wish to query
 #[derive(PartialEq, Eq, Debug)]
 pub enum QueryField {
     Name, 
     Login
 }
-/// Provides a tuple of query,mode 
+/// Provides a tuple of query, mode 
 #[derive(PartialEq, Eq, Debug)]
 pub enum QueryParam {
     Name(String, QueryMode),
@@ -93,10 +103,10 @@ pub enum QueryParam {
 }
 
 impl QueryParam {
-    /// Given a vaule, field, and mode, create a new QueryParam
+    /// Given a value, field, and mode, create a new QueryParam
     pub fn new<I:Into<String>>(value: I, field: QueryField, mode: QueryMode) -> Self {
         match field {
-           QueryField::Name => QueryParam::Name(value.into(), mode),
+            QueryField::Name  => Self::Name( value.into(), mode),
             QueryField::Login => Self::Login(value.into(), mode)
         }
     }
@@ -143,46 +153,16 @@ pub async fn personview(pool: &sqlx::PgPool, param: QueryParam) -> Result<Vec<se
     let mut lookup = HashMap::new();
     let (query, binding) = match param {
         QueryParam::Name(name, mode) => {
-            match mode {
-                QueryMode::ILike => {
-                    lookup.insert("comparison".into(), "ILIKE");
-                    let query_name = strfmt(QUERY_NAME, &lookup).unwrap();
-                    let name = format!("%{}%", name);
-                    (query_name, name)
-                },
-                QueryMode::Like => {
-                    lookup.insert("comparison".into(), "LIKE");
-                    let query_name = strfmt(QUERY_NAME, &lookup).unwrap();
-                    let name = format!("%{}%", name);
-                    (query_name, name)
-                },
-                QueryMode::Exact => {
-                    lookup.insert("comparison".into(), "=");
-                    let query_name = strfmt(QUERY_NAME, &lookup).unwrap();
-                    (query_name, name)
-                },
-            }
+            lookup.insert("comparison".into(), mode.comparison());
+            let query_name = strfmt(QUERY_NAME, &lookup).unwrap();
+            let name = format!("%{}%", name);
+            (query_name, name)
         }
         QueryParam::Login(login, mode) => {
-            match mode {
-                QueryMode::ILike => {
-                    lookup.insert("comparison".into(), "ILIKE");
-                    let query_login = strfmt(QUERY_LOGIN, &lookup).unwrap();
-                    let login = format!("%{}%", login);
-                    (query_login, login)
-                },
-                QueryMode::Like => {
-                    lookup.insert("comparison".into(), "LIKE");
-                    let query_login = strfmt(QUERY_LOGIN, &lookup).unwrap();
-                    let login = format!("%{}%", login);
-                    (query_login, login)
-                },
-                QueryMode::Exact => {
-                    lookup.insert("comparison".into(), "=");
-                    let query_login = strfmt(QUERY_LOGIN, &lookup).unwrap();
-                    (query_login, login)
-                },
-            }
+            lookup.insert("comparison".into(), mode.comparison());
+            let query_login = strfmt(QUERY_LOGIN, &lookup).unwrap();
+            let login = format!("%{}%", login);
+            (query_login, login)
         }
     };
     
