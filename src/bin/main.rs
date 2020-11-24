@@ -42,7 +42,7 @@ enum Opt {
     
         /// specify the name of your login
         #[structopt(short, long)]
-        login: Option<String>
+        login: Option<String>.
     }
 }
 
@@ -72,22 +72,8 @@ impl PhoneRow {
     pub fn new() -> Self {
         Self::default()
     }
-
-    // pub fn row(&self) -> Row {
-    //     let Self{ext, home, pager, cell, location} = self;
-    //     let mut row = Vec::new();
-       
-    //     row.push(format_phone(ext, "Ext"));
-    //     row.push(format_phone(home, "H"));
-    //     row.push(format_phone(pager, "P"));
-    //     row.push(format_phone(cell, "C"));
-    //     match location {
-    //         Some(loc) => row.push(Cell::new(&format!("Loc: {}", loc))),
-    //         None => row.push(Cell::new("Loc:"))
-    //     };
-    //     Row::new(row)
-    // }
-    pub fn row1(&self) -> Row {
+    /// return the left row.
+    pub fn row_left(&self) -> Row {
         let Self{ext, home,..} = self;
         let mut row = Vec::new();
        
@@ -97,7 +83,8 @@ impl PhoneRow {
         
         Row::new(row)
     }
-    pub fn row2(&self) -> Row {
+    /// return the right row. 
+    pub fn row_right(&self) -> Row {
         let Self{pager, cell, location,..} = self;
         let mut row = Vec::new();
         row.push(format_phone(pager, "P"));
@@ -179,8 +166,8 @@ async fn process_read(name: Option<String>, login: Option<String>) -> Result<(),
                     }
                     phonerow.location = Some(phone.location.clone());
                 }
-                table_r1.add_row(phonerow.row1());
-                table_r2.add_row(phonerow.row2());
+                table_r1.add_row(phonerow.row_left());
+                table_r2.add_row(phonerow.row_right());
                 table.add_row(row![table_r1.to_string(), table_r2.to_string()]);
             }
         }
