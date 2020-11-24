@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use strfmt::strfmt;
 use futures::TryStreamExt;
 use sqlx::FromRow;
-use crate::Phone;
 use crate::PhoneCategory;
 use crate::Location;
 use crate::QueryMode;
@@ -16,7 +15,7 @@ SELECT
     row_to_json(r) AS inner 
 FROM (
         SELECT 
-            * 
+            id as phone_id, * 
         FROM
             phone 
         {query}

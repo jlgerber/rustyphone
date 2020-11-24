@@ -5,7 +5,7 @@
 use std::convert::AsRef;
 use sqlx::prelude::*;
 
-const CREATE_PHONE: &'static str = r"
+const CREATE_PHONE: &str = r"
 SELECT 
     *
 FROM

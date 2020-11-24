@@ -1,4 +1,3 @@
-use async_std;
 #[macro_use] extern crate prettytable;
 use prettytable::{Table, format};
 use sqlx::postgres::PgPoolOptions;
@@ -8,6 +7,7 @@ use structopt::StructOpt;
 use userdb::create;
 use userdb::DB_URL;
 use userdb::PersonView;
+use userdb::Phone;
 use userdb::PhoneRow;
 use userdb::read;
 use userdb::read::person::PersonQuery;
@@ -15,6 +15,8 @@ use userdb::PhoneCategory;
 use userdb::QueryMode;
 use userdb::read::phone::PhoneQuery;
 use userdb::Location;
+use std::str::FromStr;
+use userdb::prelude::*;
 //-------------------------
 // Structopt Structures
 //-------------------------
@@ -232,7 +234,7 @@ async fn process_read_person(
                 }
             }
             table.printstd();
-            println!("");
+            println!();
         }
     }
     
@@ -242,6 +244,7 @@ async fn process_read_person(
 //
 // process the read phone command
 //
+
 async fn process_read_phone(
     query: PhoneQuery,
     mode: QueryMode,
@@ -256,6 +259,21 @@ async fn process_read_phone(
     if json {
         let phones = serde_json::to_string_pretty(&results).unwrap();
         println!("{}", phones);
+    } else {
+        let mut table = Table::new();
+        table.set_format(*format::consts::FORMAT_CLEAN);
+        table.add_row(row![bFC->"ID", bFC->"NUMBER", bFC->"CATEGORY", bFC->"LOCATION"]);
+        for result in results {
+            let phone: Phone = serde_json::from_value(result).unwrap();
+
+            table.add_row(row![
+                phone.phone_id, 
+                phone.number, 
+                PhoneCategory::from_str(&phone.category).unwrap().to_static_str(), 
+                Location::from_str(&phone.location).unwrap().to_static_str()
+            ]);
+        }
+        table.printstd();
     }
     Ok(())
 }

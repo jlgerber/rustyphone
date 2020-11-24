@@ -15,19 +15,19 @@ pub enum QueryMode {
 impl QueryMode {
     /// Return the comparsion operator as a static str 
     pub fn comparison(&self) -> &'static str {
-        match self {
-            &Self::ILike => "ILIKE",
-            &Self::Like => "LIKE",
-            &Self::Exact => "=",
+        match *self {
+            Self::ILike => "ILIKE",
+            Self::Like => "LIKE",
+            Self::Exact => "=",
         }
     }
 }
 impl fmt::Display for QueryMode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &Self::ILike => write!(f, "ILIKE"),
-            &Self::Like => write!(f, "LIKE"),
-            &Self::Exact => write!(f, "="),
+        match *self {
+            Self::ILike => write!(f, "ILIKE"),
+            Self::Like => write!(f, "LIKE"),
+            Self::Exact => write!(f, "="),
         }
     }
 }

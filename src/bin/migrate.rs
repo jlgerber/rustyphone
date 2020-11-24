@@ -3,7 +3,7 @@ use sqlx::ConnectOptions;
 //use sqlx::migrate;
 use sqlx::postgres::PgConnectOptions;
 //const DB_URL: &'static str = "postgres://postgres:example@localhost:5432/test";
-use async_std;
+//use async_std;
 
 use sqlx::migrate::Migrator;
 static MIGRATOR: Migrator = sqlx::migrate!();

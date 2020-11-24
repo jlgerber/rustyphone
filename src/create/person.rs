@@ -5,7 +5,7 @@
 use std::convert::AsRef;
 use sqlx::prelude::*;
 
-const CREATE_PERSON: &'static str = r"
+const CREATE_PERSON: &str = r"
 WITH cte_department AS (
     SELECT 
         id as dept_id
