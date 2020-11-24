@@ -22,10 +22,10 @@ impl FromStr for Location {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "portland" | "pd"  => Ok(Self::Portland),
-            "playa" | "playavista" | "playa vista" | "venice" | "pv"=> Ok(Self::PlayaVista),
+            "playa" | "playavista" | "playa vista" | "playa-vista"| "venice" | "pv"=> Ok(Self::PlayaVista),
             "vancouver" | "bc"  => Ok(Self::Vancouver),
             "montreal" | "mt" => Ok(Self::Montreal),
-            "hyderabald" | "hb" => Ok(Self::Hyderabad),
+            "hyderabad" | "hb" => Ok(Self::Hyderabad),
             _ => Err(Self::Err::InvalidLocation(s.to_string()))
         }
     }
