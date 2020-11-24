@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use crate::traits::ToStaticStr;
-use crate::errors::PhoneError;
+use crate::PhoneError;
 use std::fmt;
 use serde::{Serialize, Deserialize};
 
