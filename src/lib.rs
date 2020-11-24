@@ -17,7 +17,7 @@ pub use person::Person;
 pub use person_select::PersonSelect;
 pub use person_view::PersonView;
 pub use phone::Phone;
-pub use read::QueryParam;
+//pub use read::QueryParam;
 pub use traits::Selectable;
 pub use utils::{print_person};
 

@@ -7,7 +7,6 @@ use structopt::StructOpt;
 use userdb::read;
 use userdb::create;
 use userdb::DB_URL;
-use userdb::QueryParam;
 use userdb::PersonView;
 
 //-------------------------
@@ -186,9 +185,9 @@ async fn process_read_person(name: Option<String>, login: Option<String>, json: 
     // build out the query param, assuming that if name is set,
     // then login is not set
     let query_param = if name.is_some() {
-        QueryParam::new(name.unwrap(), read::QueryField::Name, read::QueryMode::ILike)
+        read::person::QueryParam::new(name.unwrap(), read::person::QueryField::Name, read::person::QueryMode::ILike)
     } else {
-        QueryParam::new(login.unwrap(), read::QueryField::Login, read::QueryMode::ILike)
+        read::person::QueryParam::new(login.unwrap(), read::person::QueryField::Login, read::person::QueryMode::ILike)
     };
 
     // construct a connection pool to the db
@@ -197,25 +196,16 @@ async fn process_read_person(name: Option<String>, login: Option<String>, json: 
         .connect(DB_URL).await?;
     
     // query the database
-    let results = read::personview(&pool,query_param).await?;
+    let results = read::person::personview(&pool,query_param).await?;
 
-    // present the results in a table
-    let sz = results.len();
-    let mut cnt = 0;
-    if json && sz > 0 {
-        println!("[");
-    }
-    for result in results {
-        if json {
-            let person = serde_json::to_string_pretty(&result)
-                .unwrap()
-                .split("\n")
-                .map(|x| format!("  {}", x))
-                .collect::<Vec<_>>()
-                .join("\n");
-            println!("{}{}", person, if cnt < sz-1{","}else{""});
-            cnt +=1;
-        } else {
+    // present the results - either in a table or as raw json, depending upon
+    // whether the user has requested json via the --json flag or not
+    if json {
+        // convert to json and print it out. simple as can be
+        let people = serde_json::to_string_pretty(&results).unwrap();
+        println!("{}", people);
+    } else {
+        for result in results {
             let person: PersonView = serde_json::from_value(result).unwrap();
             let mut table = Table::new();
             table.set_format(*format::consts::FORMAT_CLEAN);
@@ -257,9 +247,7 @@ async fn process_read_person(name: Option<String>, login: Option<String>, json: 
             println!("");
         }
     }
-    if json && sz > 0 {
-        println!("]");
-    }
+    
     Ok(())
 }
 
