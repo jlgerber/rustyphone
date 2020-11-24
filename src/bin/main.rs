@@ -1,13 +1,16 @@
 use async_std;
 #[macro_use] extern crate prettytable;
-use prettytable::{Table, Row, Cell, format};
+use prettytable::{Table, format};
 use sqlx::postgres::PgPoolOptions;
 use structopt::StructOpt;
+
 // internal
-use userdb::read;
 use userdb::create;
 use userdb::DB_URL;
 use userdb::PersonView;
+use userdb::PhoneRow;
+use userdb::read;
+use userdb::read::person::PersonQuery;
 
 //-------------------------
 // Structopt Structures
@@ -23,6 +26,21 @@ enum ReadOpt {
         /// specify the name of your login
         #[structopt(short, long)]
         login: Option<String>,
+
+        /// specify the title
+        #[structopt(short, long)]
+        title: Option<String>,
+
+        /// Display results as json instead of a table
+        #[structopt(short,long)]
+        json: bool,
+    },
+    Title {
+        /// Display results as json instead of a table
+        #[structopt(short,long)]
+        json: bool,
+    },
+    Department {
         /// Display results as json instead of a table
         #[structopt(short,long)]
         json: bool,
@@ -32,17 +50,16 @@ enum ReadOpt {
         #[structopt(short, long)]
         number: Option<String>,
 
-        /// specify the category of your phone number
+        /// Specify the category of your phone number
         #[structopt(short, long)]
         category: Option<String>,
 
-        /// specify the location of your phone number
+        /// Specify the location of your phone number
         #[structopt(short, long)]
         location: Option<String>,
     }
 
 }
-
 
 #[derive(StructOpt, Debug)]
 struct Opt {
@@ -55,6 +72,10 @@ struct Opt {
         #[structopt(short, long)]
         login: Option<String>,
 
+        /// specify the title
+        #[structopt(short, long)]
+        title: Option<String>,
+
         /// Display results as json instead of a table
         #[structopt(short,long)]
         json: bool,
@@ -66,100 +87,35 @@ struct Opt {
 #[derive(StructOpt, Debug)]
 #[structopt(about="crud operations for phone command")]
 enum Opt2 {
-    /// create a person
+
+    /// Create a person
     Create {
 
         /// Provide first name
         #[structopt(name = "FIRSTNAME")]
         first: String,
+
         /// Provide the last name
         #[structopt(name = "LASTNAME")]
         last: String,
+
         /// Provide the login
         #[structopt(name = "LOGIN")]
         login: String,
-        /// provide teh department
+
+        /// Provide the department
         #[structopt(name = "DEPARTMENT")]
         department: String,
+
         /// Provide the title
         #[structopt(name = "TITLE")]
         title: String
     },
+
     /// Query additional entities beyond people
     Read {
         #[structopt(subcommand)]
         sub: ReadOpt,
-    }
-}
-
-
-//------------------
-// PhoneRow struct
-//------------------
-
-#[derive(Debug)]
-struct PhoneRow {
-    pub ext: Option<String>,
-    pub home: Option<String>,
-    pub pager: Option<String>,
-    pub cell: Option<String>,
-    pub location: Option<String>
-}
-
-impl Default for PhoneRow {
-    fn default() -> Self {
-        Self {
-            ext: None,
-            home:None,
-            pager: None,
-            cell: None,
-            location: None
-        }
-    }
-}
-
-impl PhoneRow {
-    pub fn new() -> Self {
-        Self::default()
-    }
-    /// return the left row.
-    pub fn row_left(&self) -> Row {
-        let Self{ext, home,..} = self;
-        let mut row = Vec::new();
-       
-        row.push(format_phone(ext, "Ext"));
-        row.push(format_phone(home, "H"));
-       // row.push(format_phone(pager, "P"));
-        
-        Row::new(row)
-    }
-    /// return the right row. 
-    pub fn row_right(&self) -> Row {
-        let Self{pager, cell, location,..} = self;
-        let mut row = Vec::new();
-        row.push(format_phone(pager, "P"));
-        row.push(format_phone(cell, "C"));
-        match location {
-            Some(loc) => row.push(Cell::new(&format!("Loc: {}", loc))),
-            None => row.push(Cell::new("Loc:"))
-        };
-        Row::new(row)
-    }
-}
-
-fn format_phone(num: &Option<String>, label: &str) -> Cell {
-    if num.is_some() {
-        
-        let num = num.as_deref().unwrap();
-        let ccnt = num.chars().count();
-        if ccnt == 7 {
-            // assuming ascii numbers
-            Cell::new(&format!("{}: {}-{}-{}",label,&num[..3], &num[3..6], &num[6..] ))
-        } else {
-            Cell::new(&format!("{}: {}", label, num))
-        }
-    } else {
-        Cell::new(&format!("{}:     ", label))
     }
 }
 
@@ -171,32 +127,36 @@ fn format_phone(num: &Option<String>, label: &str) -> Cell {
 //
 // process reading of person
 //
-async fn process_read_person(name: Option<String>, login: Option<String>, json: bool) -> Result<(),sqlx::Error> {
+async fn process_read_person(
+    name: Option<String>, 
+    login: Option<String>, 
+    title: Option<String>,
+    json: bool
+) -> Result<(),sqlx::Error> {
     // verify that either name or login is set
-    if name.is_none() && login.is_none() {
-        eprintln!("\nError: Must provide --name or --login");
-        std::process::exit(1);
-    }
-    if name.is_some() && login.is_some() {
-        eprintln!("\nError: must select either login or name");
+    if name.is_none() && login.is_none() && title.is_none(){
+        eprintln!("\nError: Must provide --name or --login or --title");
         std::process::exit(1);
     }
     
+    
     // build out the query param, assuming that if name is set,
     // then login is not set
-    let query_param = if name.is_some() {
-        read::person::QueryParam::new(name.unwrap(), read::person::QueryField::Name, read::person::QueryMode::ILike)
-    } else {
-        read::person::QueryParam::new(login.unwrap(), read::person::QueryField::Login, read::person::QueryMode::ILike)
-    };
+    // let query_param = if name.is_some() {
+    //     read::person::QueryParam::new(name.unwrap(), read::person::QueryField::Name, read::person::QueryMode::ILike)
+    // } else {
+    //     read::person::QueryParam::new(login.unwrap(), read::person::QueryField::Login, read::person::QueryMode::ILike)
+    // };
 
     // construct a connection pool to the db
     let  pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(DB_URL).await?;
     
+        let personquery = PersonQuery{name, login, title};
     // query the database
-    let results = read::person::personview(&pool,query_param).await?;
+    //let results = read::person::personview(&pool,query_param, ).await?;
+    let results = read::person::view(&pool, personquery, read::person::QueryMode::ILike ).await?;
 
     // present the results - either in a table or as raw json, depending upon
     // whether the user has requested json via the --json flag or not
@@ -257,18 +217,77 @@ async fn process_read_person(name: Option<String>, login: Option<String>, json: 
 async fn process_read_phone(
     number: Option<String>, 
     category: Option<String>, 
-    location: Option<String>) 
--> Result<(), sqlx::Error> 
-{
+    location: Option<String>
+) -> Result<(), sqlx::Error> {
     println!("{:?} {:?} {:?}", number, category, location);
     Ok(())
 }
 
 //
+// Process read title request
+//
+async fn process_read_title(json: bool)  -> Result<(), sqlx::Error> 
+{
+    // construct a connection pool to the db
+    let  pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(DB_URL).await?;
+    
+    let results = read::title::titleview(&pool).await?;
+    if json {
+        let titles = serde_json::to_string_pretty(&results).unwrap();
+        println!("{}", titles);
+    } else {
+        let mut table = Table::new();
+        table.set_format(*format::consts::FORMAT_CLEAN);
+        table.add_row(row![bFC->"NAME", bFC->"ID"]);
+        for result in results {
+            let title: read::title::TitleView = serde_json::from_value(result).unwrap();
+            table.add_row(row![b->title.name, title.id]);
+        }
+        table.printstd();
+    }
+    Ok(())
+}
+
+//
+// process read department request
+//
+async fn process_read_department(json: bool)  -> Result<(), sqlx::Error> 
+{
+    // construct a connection pool to the db
+    let  pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(DB_URL).await?;
+    
+    let results = read::department::departmentview(&pool).await?;
+    if json {
+        let depts = serde_json::to_string_pretty(&results).unwrap();
+        println!("{}", depts);
+    } else {
+        let mut table = Table::new();
+        table.set_format(*format::consts::FORMAT_CLEAN);
+        table.add_row(row![bFC->"NAME", bFC->"ID"]);
+        for result in results {
+            let dept: read::department::DepartmentView = serde_json::from_value(result).unwrap();
+            table.add_row(row![b->dept.name, dept.id]);
+        }
+        table.printstd();
+    }
+    Ok(())
+}
+
+
+//
 // process creation of person
 //
-async fn process_create(first: &str, last:&str, login: &str, department: &str, title: &str) 
--> Result<(),sqlx::Error> {
+async fn process_create(
+    first: &str, 
+    last:&str, 
+    login: &str, 
+    department: &str, 
+    title: &str
+) -> Result<(),sqlx::Error> {
     let  pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(DB_URL).await?;
@@ -284,9 +303,11 @@ async fn main() -> Result<(), sqlx::Error> {
     // build options from structopt
     let opt = Opt::from_args();
     match opt {
-        Opt{name, login, json, cmd: None} => process_read_person(name, login,json ).await,
+        Opt{name, login, json, title, cmd: None} => process_read_person(name, login,title, json ).await,
         Opt{cmd: Some(Opt2::Read{sub}), ..} => match sub {
-            ReadOpt::Person{name, login, json} => process_read_person(name, login, json).await,
+            ReadOpt::Person{name, login, title, json} => process_read_person(name, login, title, json).await,
+            ReadOpt::Title{json} => process_read_title(json).await,
+            ReadOpt::Department{json} => process_read_department(json).await,
             ReadOpt::Phone{number, category, location} => process_read_phone(number, category, location).await
         }
         Opt{cmd: Some(Opt2::Create{first, last, login, department, title}), ..} => process_create(&first, &last, &login, &department, &title).await,
