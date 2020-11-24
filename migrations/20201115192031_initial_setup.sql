@@ -136,6 +136,7 @@ BEGIN
         (INSERT 
            INTO phone (number, category, location) 
          VALUES (number, category, site)
+         ON CONFLICT DO NOTHING
       RETURNING id), 
     X AS 
         (SELECT id 
