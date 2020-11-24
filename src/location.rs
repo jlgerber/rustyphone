@@ -26,7 +26,7 @@ impl FromStr for Location {
             "vancouver" | "bc"  => Ok(Self::Vancouver),
             "montreal" | "mt" => Ok(Self::Montreal),
             "hyderabald" | "hb" => Ok(Self::Hyderabad),
-            _ => Err(Self::Err::InvalidCategory(s.to_string()))
+            _ => Err(Self::Err::InvalidLocation(s.to_string()))
         }
     }
 }
