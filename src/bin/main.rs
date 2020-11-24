@@ -11,7 +11,10 @@ use userdb::PersonView;
 use userdb::PhoneRow;
 use userdb::read;
 use userdb::read::person::PersonQuery;
-
+use userdb::PhoneCategory;
+use userdb::QueryMode;
+use userdb::read::phone::PhoneQuery;
+use userdb::Location;
 //-------------------------
 // Structopt Structures
 //-------------------------
@@ -54,17 +57,25 @@ enum ReadOpt {
         json: bool,
     },
     Phone {
+        /// specify the id
+        #[structopt(short, long)]
+        id: Option<u32>,
+
         /// Specify the number to match
         #[structopt(short, long)]
         number: Option<String>,
 
         /// Specify the category of your phone number
         #[structopt(short, long)]
-        category: Option<String>,
+        category: Option<PhoneCategory>,
 
         /// Specify the location of your phone number
         #[structopt(short, long)]
-        location: Option<String>,
+        location: Option<Location>,
+
+        /// Display results as json instead of as a table
+        #[structopt(short,long)]
+        json: bool,
     }
 
 }
@@ -96,6 +107,7 @@ struct Opt {
         /// Display results as json instead of as a table
         #[structopt(short,long)]
         json: bool,
+
         /// Optional subcommands
         #[structopt(subcommand)]
         cmd: Option<Opt2>
@@ -162,7 +174,7 @@ async fn process_read_person(
 
     // construct a connection pool to the db
     let  pool = PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(1)
         .connect(DB_URL).await?;
 
     // PersonQuery is just a simple ol' pod
@@ -172,7 +184,7 @@ async fn process_read_person(
                                 .title(title)
                                 .dept(dept);
     // query the database
-    let results = read::person::query(&pool, personquery, read::person::QueryMode::ILike ).await?;
+    let results = read::person::query(&pool, personquery, QueryMode::ILike ).await?;
 
     // present the results - either in a table or as raw json, depending upon
     // whether the user has requested json via the --json flag or not
@@ -231,11 +243,20 @@ async fn process_read_person(
 // process the read phone command
 //
 async fn process_read_phone(
-    number: Option<String>, 
-    category: Option<String>, 
-    location: Option<String>
+    query: PhoneQuery,
+    mode: QueryMode,
+    json: bool,
 ) -> Result<(), sqlx::Error> {
-    println!("{:?} {:?} {:?}", number, category, location);
+    // construct a connection pool to the db
+    let  pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(DB_URL).await?;
+
+    let results = read::phone::query(&pool, query, mode).await?;
+    if json {
+        let phones = serde_json::to_string_pretty(&results).unwrap();
+        println!("{}", phones);
+    }
     Ok(())
 }
 
@@ -246,7 +267,7 @@ async fn process_read_title(json: bool)  -> Result<(), sqlx::Error>
 {
     // construct a connection pool to the db
     let  pool = PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(1)
         .connect(DB_URL).await?;
     
     let results = read::title::titleview(&pool).await?;
@@ -273,7 +294,7 @@ async fn process_read_department(json: bool)  -> Result<(), sqlx::Error>
 {
     // construct a connection pool to the db
     let  pool = PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(1)
         .connect(DB_URL).await?;
     
     let results = read::department::departmentview(&pool).await?;
@@ -305,10 +326,10 @@ async fn process_create(
     title: &str
 ) -> Result<(),sqlx::Error> {
     let  pool = PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(1)
         .connect(DB_URL).await?;
         
-    let result = create::person(&pool, first, last, login, department, title).await?;
+    let result = create::person::person(&pool, first, last, login, department, title).await?;
     println!("ID: {}", result);
     Ok(())
 }
@@ -333,7 +354,14 @@ async fn main() -> Result<(), sqlx::Error> {
             },
             ReadOpt::Title{json} => process_read_title(json).await,
             ReadOpt::Department{json} => process_read_department(json).await,
-            ReadOpt::Phone{number, category, location} => process_read_phone(number, category, location).await
+            ReadOpt::Phone{id, number, category, location, json} => {
+                
+                let query = PhoneQuery::new()
+                .id(id)
+                .number(number)
+                .category(category)
+                .location(location);
+                process_read_phone(query, QueryMode::ILike, json ).await}
         }
         Opt{cmd: Some(Opt2::Create{first, last, login, department, title}), ..} => process_create(&first, &last, &login, &department, &title).await,
     }

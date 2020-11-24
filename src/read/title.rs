@@ -14,32 +14,6 @@ FROM (
             name
     ) AS r;";
 
-// const QUERY_NAME: &'static str = r"
-// WITH pview AS
-// ( 
-//     SELECT * 
-//     FROM personview
-//     WHERE fullname {comparison} $1
-// )
-// SELECT row_to_json(ln2) as personview from (
-// SELECT DISTINCT ON (person_id) *  
-// FROM ( SELECT pv.person_id, pv.first, pv.last, pv.login, pv.fullname, pv.department, pv.title,
-//         ( SELECT json_agg(rowval) AS phones 
-//             FROM 
-//                 ( SELECT 
-//                         phone_id, number, category, location 
-//                   FROM 
-//                         pview 
-//                   WHERE 
-//                         person_id = pv.person_id
-//                   AND
-//                         pv.phone_id IS NOT NULL
-//                 ) 
-//             rowval
-//         ) 
-//         FROM pview AS pv
-//     ) AS ln
-// ) AS ln2;";
      
 #[derive(Serialize,Deserialize,Debug)]
 pub struct TitleView {

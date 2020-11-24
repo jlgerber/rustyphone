@@ -2,9 +2,11 @@
 use futures::TryStreamExt;
 use sqlx::FromRow;
 use serde::{Serialize, Deserialize};
+use crate::JsonAdapter;
+
 const QUERY: &'static str = r"
 SELECT 
-    row_to_json(r) AS departmentview 
+    row_to_json(r) AS inner 
 FROM (
         SELECT 
             * 
@@ -13,44 +15,11 @@ FROM (
         ORDER BY 
             name
     ) AS r;";
-
-// const QUERY_NAME: &'static str = r"
-// WITH pview AS
-// ( 
-//     SELECT * 
-//     FROM personview
-//     WHERE fullname {comparison} $1
-// )
-// SELECT row_to_json(ln2) as personview from (
-// SELECT DISTINCT ON (person_id) *  
-// FROM ( SELECT pv.person_id, pv.first, pv.last, pv.login, pv.fullname, pv.department, pv.department,
-//         ( SELECT json_agg(rowval) AS phones 
-//             FROM 
-//                 ( SELECT 
-//                         phone_id, number, category, location 
-//                   FROM 
-//                         pview 
-//                   WHERE 
-//                         person_id = pv.person_id
-//                   AND
-//                         pv.phone_id IS NOT NULL
-//                 ) 
-//             rowval
-//         ) 
-//         FROM pview AS pv
-//     ) AS ln
-// ) AS ln2;";
      
 #[derive(Serialize,Deserialize,Debug)]
 pub struct DepartmentView {
     pub id: i32,
     pub name: String,
-}
-// just a way of extracting the json. We need to be able to implement
-// FromRow on something. (unless serde_json::Value has it implemented)
-#[derive(FromRow, Debug)]  
-struct JasonAdapter {
-    pub departmentview: serde_json::Value
 }
 
 /// Given a reference to the PgPool and a QueryParam instance, look up the 
@@ -60,8 +29,8 @@ pub async fn departmentview(pool: &sqlx::PgPool) -> Result<Vec<serde_json::Value
     let mut rows = sqlx::query(&QUERY)
                     .fetch(pool);
     while let Some(row) = rows.try_next().await? {
-        let JasonAdapter{departmentview} =JasonAdapter::from_row(&row).unwrap();   
-        rval.push(departmentview);
+        let JsonAdapter{inner} =JsonAdapter::from_row(&row).unwrap();   
+        rval.push(inner);
     }
     Ok(rval)
 }
