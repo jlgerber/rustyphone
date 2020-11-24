@@ -5,29 +5,36 @@ use std::collections::HashMap;
 use strfmt::strfmt;
 use std::fmt;
 
+/// Struct encapsulating potential query parameters
 #[derive(Debug)]
 pub struct PersonQuery {
     pub name: Option<String>,
     pub login: Option<String>,
-    pub title: Option<String>
+    pub title: Option<String>,
+    pub dept: Option<String>
 }
 
-impl PersonQuery {
-
-    fn joiner(cnt: u8) -> &'static str {
-        if cnt == 1 {
-            "WHERE"
-        } else {
-            "AND"
+impl Default for PersonQuery {
+    fn default() -> Self {
+        Self {
+            name: None,
+            login: None,
+            title: None,
+            dept: None
         }
     }
+}
+impl PersonQuery {
+
+    /// Generate a prepared statement to query for person(s) as a string
     pub fn query(&self, mode: &QueryMode) -> String {
         let mut lookup = HashMap::new();
         let mut where_clause = String::new();
+        // start with 1 as the $var in postgres's prepared statements 
+        // start at $1
         let mut cnt = 1;
         if self.name.is_some() {
             where_clause = format!("{} fullname {} ${}", Self::joiner(cnt), mode, cnt);
-            
             cnt +=1;
         }
         if self.login.is_some() {
@@ -36,10 +43,48 @@ impl PersonQuery {
         }
         if self.title.is_some() {
             where_clause = format!("{}\n{} title {} ${}", where_clause, Self::joiner(cnt), mode, cnt);
+            cnt +=1;
+        }
+        if self.dept.is_some() {
+            where_clause = format!("{}\n{} department {} ${}", where_clause, Self::joiner(cnt), mode, cnt);
             //cnt +=1;
         }
         lookup.insert("query".into(), where_clause);
         strfmt(QUERY, &lookup).unwrap()
+    }
+
+    pub fn new() -> Self {
+        PersonQuery::default()
+    }
+
+    pub fn name(mut self, name: Option<String>) -> Self {
+        self.name = name;
+        self
+    }
+
+    pub fn login(mut self, login: Option<String>) -> Self {
+        self.login = login;
+        self
+    }
+
+    pub fn title(mut self, title: Option<String>) -> Self {
+        self.title = title;
+        self
+    }
+    
+    pub fn dept(mut self, dept: Option<String>) -> Self {
+        self.dept = dept;
+        self
+    }
+    // little helper function to build up the query
+    fn joiner(cnt: u8) -> &'static str {
+        // 1 is the lowest value that we should encounter, since
+        // the index is 1-based.
+        if cnt == 1 {
+            "WHERE"
+        } else {
+            "AND"
+        }
     }
 }
 
@@ -140,7 +185,7 @@ pub async fn query(
     let mut rval = Vec::new();
     let querymode = query.query(&mode);
     let  mut rows = sqlx::query(&querymode);
-    let PersonQuery{name, login, title} = query;
+    let PersonQuery{name, login, title, dept} = query;
     if name.is_some() {
         let mut name = name.unwrap();
         if mode == QueryMode::ILike || mode == QueryMode::Like {
@@ -161,6 +206,13 @@ pub async fn query(
             title = format!("%{}%", title);
         }
         rows = rows.bind(title);
+    }
+    if dept.is_some() {
+        let mut dept = dept.unwrap();
+        if mode == QueryMode::ILike || mode == QueryMode::Like {
+            dept = format!("%{}%", dept);
+        }
+        rows = rows.bind(dept);
     }
     let mut rows = rows.fetch(pool);
                     //.bind(binding)

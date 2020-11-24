@@ -6,7 +6,7 @@ edition = "2018"
 
 
 [[bin]]
-name = "client"
+name = "phone"
 path = "src/bin/main.rs"
 
 [[bin]]

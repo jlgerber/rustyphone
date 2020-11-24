@@ -31,6 +31,14 @@ enum ReadOpt {
         #[structopt(short, long)]
         title: Option<String>,
 
+        /// specify the department
+        #[structopt(short, long)]
+        dept: Option<String>,
+
+        /// Optionally specify the fullname (alternative to using --name flag)
+        #[structopt(name="FULLNAME")]
+        fullname: Option<String>,
+
         /// Display results as json instead of a table
         #[structopt(short,long)]
         json: bool,
@@ -62,6 +70,7 @@ enum ReadOpt {
 }
 
 #[derive(StructOpt, Debug)]
+#[structopt(about="Search for people, and more...")]
 struct Opt {
 
         /// Fetch phone records for people by full name
@@ -72,11 +81,19 @@ struct Opt {
         #[structopt(short, long)]
         login: Option<String>,
 
-        /// specify the title
+        /// Fetch phone records for people by title
         #[structopt(short, long)]
         title: Option<String>,
 
-        /// Display results as json instead of a table
+        /// Fetch phone records for people by department
+        #[structopt(short, long)]
+        dept: Option<String>,
+
+        /// Optionally specify the fullname (alternative to using --name flag)
+        #[structopt(name="FULLNAME")]
+        fullname: Option<String>,
+
+        /// Display results as json instead of as a table
         #[structopt(short,long)]
         json: bool,
         /// Optional subcommands
@@ -85,10 +102,9 @@ struct Opt {
 }
 
 #[derive(StructOpt, Debug)]
-#[structopt(about="crud operations for phone command")]
 enum Opt2 {
 
-    /// Create a person
+    /// Create entities
     Create {
 
         /// Provide first name
@@ -112,7 +128,7 @@ enum Opt2 {
         title: String
     },
 
-    /// Query additional entities beyond people
+    /// Query entities (like title and department)
     Read {
         #[structopt(subcommand)]
         sub: ReadOpt,
@@ -131,14 +147,16 @@ async fn process_read_person(
     name: Option<String>, 
     login: Option<String>, 
     title: Option<String>,
+    dept: Option<String>,
     json: bool
 ) -> Result<(),sqlx::Error> {
     // verify that either name or login is set
     if name.is_none()  && 
        login.is_none() && 
-       title.is_none()
+       title.is_none() &&
+       dept.is_none()
     {
-        eprintln!("\nError: Must provide --name or --login or --title");
+        eprintln!("\nError: Must provide --name or --login or --title or --dept");
         std::process::exit(1);
     }
 
@@ -146,8 +164,13 @@ async fn process_read_person(
     let  pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(DB_URL).await?;
+
     // PersonQuery is just a simple ol' pod
-    let personquery = PersonQuery{name, login, title};
+    let personquery = PersonQuery::new()
+                                .name(name)
+                                .login(login)
+                                .title(title)
+                                .dept(dept);
     // query the database
     let results = read::person::query(&pool, personquery, read::person::QueryMode::ILike ).await?;
 
@@ -296,9 +319,18 @@ async fn main() -> Result<(), sqlx::Error> {
     // build options from structopt
     let opt = Opt::from_args();
     match opt {
-        Opt{name, login, json, title, cmd: None} => process_read_person(name, login,title, json ).await,
+        Opt{mut name, login, json, title, dept, fullname, cmd: None} => {
+            if name.is_none() && fullname.is_some() {
+                name = fullname;
+            }
+            process_read_person(name, login, title, dept, json ).await},
         Opt{cmd: Some(Opt2::Read{sub}), ..} => match sub {
-            ReadOpt::Person{name, login, title, json} => process_read_person(name, login, title, json).await,
+            ReadOpt::Person{mut name, login, title, dept, fullname, json} => {
+                if name.is_none() && fullname.is_some() {
+                    name = fullname;
+                }
+                process_read_person(name, login, title, dept, json).await
+            },
             ReadOpt::Title{json} => process_read_title(json).await,
             ReadOpt::Department{json} => process_read_department(json).await,
             ReadOpt::Phone{number, category, location} => process_read_phone(number, category, location).await
