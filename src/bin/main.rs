@@ -10,41 +10,93 @@ use userdb::DB_URL;
 use userdb::QueryParam;
 use userdb::PersonView;
 
-
+//-------------------------
+// Structopt Structures
+//-------------------------
 #[derive(StructOpt, Debug)]
-#[structopt(about="crud operations for phone command")]
-enum Opt {
-    /// create a person
-    Create {
-
-        ///provide first name
-        #[structopt(name = "FIRSTNAME")]
-        first: String,
-        /// provide the last name
-        #[structopt(name = "LASTNAME")]
-        last: String,
-        /// provide the login
-        #[structopt(name = "LOGIN")]
-        login: String,
-        /// provide teh department
-        #[structopt(name = "DEPARTMENT")]
-        department: String,
-        /// provide the title
-        #[structopt(name = "TITLE")]
-        title: String
-    },
-    /// query the userdb for a person or persons matching the 
-    /// supplied argument
-    Read {
+enum ReadOpt {
+    /// Read contact information about people
+    Person {
         /// Full name query
         #[structopt(short, long)]
         name: Option<String>,
     
         /// specify the name of your login
         #[structopt(short, long)]
-        login: Option<String>
+        login: Option<String>,
+        /// Display results as json instead of a table
+        #[structopt(short,long)]
+        json: bool,
+    },
+    Phone {
+        /// Specify the number to match
+        #[structopt(short, long)]
+        number: Option<String>,
+
+        /// specify the category of your phone number
+        #[structopt(short, long)]
+        category: Option<String>,
+
+        /// specify the location of your phone number
+        #[structopt(short, long)]
+        location: Option<String>,
+    }
+
+}
+
+
+#[derive(StructOpt, Debug)]
+struct Opt {
+
+        /// Fetch phone records for people by full name
+        #[structopt(short, long)]
+        name: Option<String>,
+    
+        /// Fetch phone records for people by login
+        #[structopt(short, long)]
+        login: Option<String>,
+
+        /// Display results as json instead of a table
+        #[structopt(short,long)]
+        json: bool,
+        /// Optional subcommands
+        #[structopt(subcommand)]
+        cmd: Option<Opt2>
+}
+
+#[derive(StructOpt, Debug)]
+#[structopt(about="crud operations for phone command")]
+enum Opt2 {
+    /// create a person
+    Create {
+
+        /// Provide first name
+        #[structopt(name = "FIRSTNAME")]
+        first: String,
+        /// Provide the last name
+        #[structopt(name = "LASTNAME")]
+        last: String,
+        /// Provide the login
+        #[structopt(name = "LOGIN")]
+        login: String,
+        /// provide teh department
+        #[structopt(name = "DEPARTMENT")]
+        department: String,
+        /// Provide the title
+        #[structopt(name = "TITLE")]
+        title: String
+    },
+    /// Query additional entities beyond people
+    Read {
+        #[structopt(subcommand)]
+        sub: ReadOpt,
     }
 }
+
+
+//------------------
+// PhoneRow struct
+//------------------
 
 #[derive(Debug)]
 struct PhoneRow {
@@ -66,7 +118,6 @@ impl Default for PhoneRow {
         }
     }
 }
-
 
 impl PhoneRow {
     pub fn new() -> Self {
@@ -113,7 +164,15 @@ fn format_phone(num: &Option<String>, label: &str) -> Cell {
     }
 }
 
-async fn process_read(name: Option<String>, login: Option<String>) -> Result<(),sqlx::Error> {
+
+//------------------------
+// Async Command Handlers
+//------------------------
+
+//
+// process reading of person
+//
+async fn process_read_person(name: Option<String>, login: Option<String>, json: bool) -> Result<(),sqlx::Error> {
     // verify that either name or login is set
     if name.is_none() && login.is_none() {
         eprintln!("\nError: Must provide --name or --login");
@@ -127,57 +186,99 @@ async fn process_read(name: Option<String>, login: Option<String>) -> Result<(),
     // build out the query param, assuming that if name is set,
     // then login is not set
     let query_param = if name.is_some() {
-        //QueryParam::ilike_name(name.unwrap())
         QueryParam::new(name.unwrap(), read::QueryField::Name, read::QueryMode::ILike)
     } else {
-        //QueryParam::ilike_login(login.unwrap())
         QueryParam::new(login.unwrap(), read::QueryField::Login, read::QueryMode::ILike)
-
     };
+
     // construct a connection pool to the db
     let  pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(DB_URL).await?;
-        
+    
+    // query the database
     let results = read::personview(&pool,query_param).await?;
-    for result in results {
-        let person: PersonView = serde_json::from_value(result).unwrap();
-        let mut table = Table::new();
-        table.set_format(*format::consts::FORMAT_CLEAN);
-        let mut table_r1 = Table::new();
-        let mut table_r2 = Table::new();
-        table_r1.set_format(*format::consts::FORMAT_CLEAN);
-        table_r2.set_format(*format::consts::FORMAT_CLEAN);
 
-        table.add_row(row![format!(" User: {}",person.login), format!("Full Name: {}",person.fullname)]);
-        table.add_row(row![format!(" Dept: {}", person.department), format!("Title: {}", person.title)]);
-        match person.phones {
-            None => {
-                table.add_row(row![" Ext:     H:       ","P:       C:       Loc:       "]);
-            },
-            Some(phones) => {
-                let mut phonerow = PhoneRow::new();
-                for phone in phones {
-                    match phone.category.as_ref() {
-                        "home" => phonerow.home = Some(phone.number.clone()),
-                        "extension" | "ext" => phonerow.ext = Some(phone.number.clone()),
-                        "cell" => phonerow.cell = Some(phone.number.clone()),
-                        _ => ()
+    // present the results in a table
+    let sz = results.len();
+    let mut cnt = 0;
+    if json && sz > 0 {
+        println!("[");
+    }
+    for result in results {
+        if json {
+            let person = serde_json::to_string_pretty(&result)
+                .unwrap()
+                .split("\n")
+                .map(|x| format!("  {}", x))
+                .collect::<Vec<_>>()
+                .join("\n");
+            println!("{}{}", person, if cnt < sz-1{","}else{""});
+            cnt +=1;
+        } else {
+            let person: PersonView = serde_json::from_value(result).unwrap();
+            let mut table = Table::new();
+            table.set_format(*format::consts::FORMAT_CLEAN);
+            // we nest two tables for phones in order to achieve a better
+            // aesthetic balance in formatting. To pull off this trick
+            // prettytable allows us to mbed one table within another.
+            let mut table_r1 = Table::new();
+            let mut table_r2 = Table::new();
+            table_r1.set_format(*format::consts::FORMAT_CLEAN);
+            table_r2.set_format(*format::consts::FORMAT_CLEAN);
+    
+            table.add_row(row![format!(" User: {}",person.login), format!("Full Name: {}",person.fullname)]);
+            table.add_row(row![format!(" Dept: {}", person.department), format!("Title: {}", person.title)]);
+            match person.phones {
+                None => {
+                    // Empty Row Handling
+                    table.add_row(row![" Ext:     H:       ","P:       C:       Loc:       "]);
+                },
+                // currently, we rely on having at most a single entry for each category. 
+                // this can be upgraded with a bit of work, by keeping track of what has already
+                // been created. Each location will have a vector of phonerow instances
+                Some(phones) => {
+                    let mut phonerow = PhoneRow::new();
+                    for phone in phones {
+                        match phone.category.as_ref() {
+                            "home" => phonerow.home = Some(phone.number.clone()),
+                            "extension" | "ext" => phonerow.ext = Some(phone.number.clone()),
+                            "cell" => phonerow.cell = Some(phone.number.clone()),
+                            _ => ()
+                        }
+                        phonerow.location = Some(phone.location.clone());
                     }
-                    phonerow.location = Some(phone.location.clone());
+                    table_r1.add_row(phonerow.row_left());
+                    table_r2.add_row(phonerow.row_right());
+                    table.add_row(row![table_r1.to_string(), table_r2.to_string()]);
                 }
-                table_r1.add_row(phonerow.row_left());
-                table_r2.add_row(phonerow.row_right());
-                table.add_row(row![table_r1.to_string(), table_r2.to_string()]);
             }
+            table.printstd();
+            println!("");
         }
-        table.printstd();
-        println!("");
-       
+    }
+    if json && sz > 0 {
+        println!("]");
     }
     Ok(())
 }
 
+//
+// process the read phone command
+//
+async fn process_read_phone(
+    number: Option<String>, 
+    category: Option<String>, 
+    location: Option<String>) 
+-> Result<(), sqlx::Error> 
+{
+    println!("{:?} {:?} {:?}", number, category, location);
+    Ok(())
+}
+
+//
+// process creation of person
+//
 async fn process_create(first: &str, last:&str, login: &str, department: &str, title: &str) 
 -> Result<(),sqlx::Error> {
     let  pool = PgPoolOptions::new()
@@ -189,13 +290,17 @@ async fn process_create(first: &str, last:&str, login: &str, department: &str, t
     Ok(())
 }
 
+
 #[async_std::main]
 async fn main() -> Result<(), sqlx::Error> {
     // build options from structopt
     let opt = Opt::from_args();
     match opt {
-        Opt::Read{name, login} => process_read(name, login).await,
-        Opt::Create{first, last, login, department, title} 
-            => process_create(&first, &last, &login, &department, &title).await
+        Opt{name, login, json, cmd: None} => process_read_person(name, login,json ).await,
+        Opt{cmd: Some(Opt2::Read{sub}), ..} => match sub {
+            ReadOpt::Person{name, login, json} => process_read_person(name, login, json).await,
+            ReadOpt::Phone{number, category, location} => process_read_phone(number, category, location).await
+        }
+        Opt{cmd: Some(Opt2::Create{first, last, login, department, title}), ..} => process_create(&first, &last, &login, &department, &title).await,
     }
 }
