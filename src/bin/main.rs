@@ -134,29 +134,22 @@ async fn process_read_person(
     json: bool
 ) -> Result<(),sqlx::Error> {
     // verify that either name or login is set
-    if name.is_none() && login.is_none() && title.is_none(){
+    if name.is_none()  && 
+       login.is_none() && 
+       title.is_none()
+    {
         eprintln!("\nError: Must provide --name or --login or --title");
         std::process::exit(1);
     }
-    
-    
-    // build out the query param, assuming that if name is set,
-    // then login is not set
-    // let query_param = if name.is_some() {
-    //     read::person::QueryParam::new(name.unwrap(), read::person::QueryField::Name, read::person::QueryMode::ILike)
-    // } else {
-    //     read::person::QueryParam::new(login.unwrap(), read::person::QueryField::Login, read::person::QueryMode::ILike)
-    // };
 
     // construct a connection pool to the db
     let  pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(DB_URL).await?;
-    
-        let personquery = PersonQuery{name, login, title};
+    // PersonQuery is just a simple ol' pod
+    let personquery = PersonQuery{name, login, title};
     // query the database
-    //let results = read::person::personview(&pool,query_param, ).await?;
-    let results = read::person::view(&pool, personquery, read::person::QueryMode::ILike ).await?;
+    let results = read::person::query(&pool, personquery, read::person::QueryMode::ILike ).await?;
 
     // present the results - either in a table or as raw json, depending upon
     // whether the user has requested json via the --json flag or not

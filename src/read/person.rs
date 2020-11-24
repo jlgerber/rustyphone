@@ -70,60 +70,6 @@ SELECT row_to_json(ln2) as personview from (
         ) AS ln
 ) AS ln2;";
 
-const QUERY_LOGIN: &'static str = r"
-WITH pview AS
-( 
-    SELECT * 
-    FROM personview
-    WHERE login {comparison} $1
-)
-SELECT row_to_json(ln2) as personview from (
-    SELECT DISTINCT ON (person_id) *  
-    FROM ( SELECT pv.person_id, pv.first, pv.last, pv.login, pv.fullname, pv.department, pv.title,
-            ( SELECT 
-                json_agg(rowval) AS phones 
-              FROM 
-                    ( SELECT phone_id, number, category, location 
-                        FROM 
-                            pview 
-                        WHERE 
-                            person_id = pv.person_id
-                        AND
-                            pv.phone_id IS NOT NULL
-                    ) 
-                rowval
-            ) 
-            FROM pview AS pv
-        ) AS ln
-) AS ln2;";
-
-const QUERY_NAME: &'static str = r"
-WITH pview AS
-( 
-    SELECT * 
-    FROM personview
-    WHERE fullname {comparison} $1
-)
-SELECT row_to_json(ln2) as personview from (
-SELECT DISTINCT ON (person_id) *  
-FROM ( SELECT pv.person_id, pv.first, pv.last, pv.login, pv.fullname, pv.department, pv.title,
-        ( SELECT json_agg(rowval) AS phones 
-            FROM 
-                ( SELECT 
-                        phone_id, number, category, location 
-                  FROM 
-                        pview 
-                  WHERE 
-                        person_id = pv.person_id
-                  AND
-                        pv.phone_id IS NOT NULL
-                ) 
-            rowval
-        ) 
-        FROM pview AS pv
-    ) AS ln
-) AS ln2;";
-     
 // just a way of extracting the json. We need to be able to implement
 // FromRow on something. (unless serde_json::Value has it implemented)
 #[derive(FromRow, Debug)]  
@@ -185,41 +131,8 @@ impl QueryParam {
         }
     }
 }
-
-/// Given a reference to the PgPool and a QueryParam instance, look up the 
-/// matching values in the db and return a vector of json objects.
-pub async fn personview(pool: &sqlx::PgPool, param: QueryParam) -> Result<Vec<serde_json::Value>, sqlx::Error> {
-    let mut lookup = HashMap::new();
-    let (query, binding) = match param {
-        QueryParam::Name(name, mode) => {
-            lookup.insert("comparison".into(), mode.comparison());
-            let query_name = strfmt(QUERY_NAME, &lookup).unwrap();
-            let name = format!("%{}%", name);
-            (query_name, name)
-        }
-        QueryParam::Login(login, mode) => {
-            lookup.insert("comparison".into(), mode.comparison());
-            let query_login = strfmt(QUERY_LOGIN, &lookup).unwrap();
-            let login = format!("%{}%", login);
-            (query_login, login)
-        }
-    };
-    
-    let mut rval = Vec::new();
-    let mut rows = sqlx::query(&query)
-                    .bind(binding)
-                    .fetch(pool);
-    while let Some(row) = rows.try_next().await? {
-        let JasonAdapter{personview} =JasonAdapter::from_row(&row).unwrap();   
-        //let person: PersonView = serde_json::from_value(personview).unwrap();
-        //rval.push(person);
-        rval.push(personview);
-    
-    }
-    Ok(rval)
-}
-
-pub async fn view(
+/// Given a PersonQuery instance and a mode, retrieve the results from the database
+pub async fn query(
     pool: &sqlx::PgPool, 
     query: PersonQuery, 
     mode: QueryMode
