@@ -42,7 +42,7 @@ enum Opt {
     
         /// specify the name of your login
         #[structopt(short, long)]
-        login: Option<String>.
+        login: Option<String>
     }
 }
 
