@@ -4,9 +4,9 @@ use crate::PhoneError;
 use std::fmt;
 use serde::{Serialize, Deserialize};
 
-
-#[derive(Debug,PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(rename="location", rename_all = "lowercase")]
+/// An enumerated list of DD locations, matching the enum in the database.
+#[derive(Debug,PartialEq, Eq, Serialize, Deserialize, Clone, sqlx::Type)]
+#[sqlx(rename="location")] //, rename_all = "lowercase")]
 pub enum Location {
     Portland,
     PlayaVista,
@@ -18,7 +18,14 @@ pub enum Location {
 
 impl FromStr for Location {
     type Err = PhoneError;
-
+    /// Convert from a str to a Location. The input is 
+    /// case insensitive, and accepts both the name and 
+    /// two letter designation for the location. 
+    ///
+    /// In the case of Playa, we accept a number of different
+    /// aliases, including with a variety of separators between
+    /// words `playa` and `vista`, including a dash, a space, and
+    /// nothing. We also accept the legacy `venice` disgnation.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "portland" | "pd"  => Ok(Self::Portland),
