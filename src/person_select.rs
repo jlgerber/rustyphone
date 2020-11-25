@@ -1,5 +1,6 @@
 
-
+//! Controls what gets selected in the SELECT
+//! statement. Currently unused.
 use crate::Selectable;
 
 #[derive(Debug,PartialEq, Eq, PartialOrd, Ord)]
