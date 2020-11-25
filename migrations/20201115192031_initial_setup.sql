@@ -41,20 +41,20 @@ CREATE TABLE IF NOT EXISTS person
 -- LOCATION TYPE --
 -------------------
 CREATE TYPE location AS ENUM  
-('portland', 
-'playavista', 
-'vancouver', 
-'montreal', 
-'hyderabad');
+('Portland', 
+'PlayaVista', 
+'Vancouver', 
+'Montreal', 
+'Hyderabad');
 
 
 ------------------------
 -- PHONECATEGORY TYPE --
 ------------------------
 CREATE TYPE phonecategory AS ENUM  
-('extension', 
-'home', 
-'cell');
+('Extension', 
+'Home', 
+'Cell');
 
 
 -----------------
