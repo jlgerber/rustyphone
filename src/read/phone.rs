@@ -4,6 +4,8 @@ use strfmt::strfmt;
 use futures::TryStreamExt;
 use sqlx::FromRow;
 use crate::PhoneCategory;
+//use crate::PhoneNumber;
+use crate::NumberString;
 use crate::Location;
 use crate::QueryMode;
 use crate::prelude::*;
@@ -26,7 +28,7 @@ FROM (
 #[derive(Debug,PartialEq, Eq)]
 pub struct PhoneQuery {
     pub id: Option<u32>,
-    pub number: Option<String>,
+    pub number: Option<NumberString>,
     pub category: Option<PhoneCategory>,
     pub location: Option<Location>
 }
@@ -50,7 +52,7 @@ impl Queryable for PhoneQuery {
         // start at $1
         let mut cnt = 1;
         if self.id.is_some() {
-            where_clause = format!("{} id {} ${}", where_joiner(cnt), mode, cnt);
+            where_clause = format!("{} id = ${}::integer", where_joiner(cnt), cnt);
             cnt +=1;
         }
         if self.number.is_some() {
@@ -58,11 +60,15 @@ impl Queryable for PhoneQuery {
             cnt+=1;
         }
         if self.category.is_some() {
-            where_clause = format!("{}\n{} category = LOWER(${})::phonecategory", where_clause, where_joiner(cnt), cnt);
+            // now that we are using PhoneCategory instead of a string, we dont need LOWER()
+            //where_clause = format!("{}\n{} category = LOWER(${})::phonecategory", where_clause, where_joiner(cnt), cnt);
+            where_clause = format!("{}\n{} category = ${}::phonecategory", where_clause, where_joiner(cnt), cnt);
             cnt +=1;
         }
         if self.location.is_some() {
-            where_clause = format!("{}\n{} location = LOWER(${})::location", where_clause, where_joiner(cnt),  cnt);
+            // see category comment
+            //where_clause = format!("{}\n{} location = LOWER(${})::location", where_clause, where_joiner(cnt),  cnt);
+            where_clause = format!("{}\n{} location = ${}::location", where_clause, where_joiner(cnt),  cnt);
             //cnt +=1;
         }
         lookup.insert("query".into(), where_clause);
@@ -82,7 +88,7 @@ impl PhoneQuery {
     }
     /// Set the number on self and return self, as per the
     /// owning builder pattern.
-    pub fn number(mut self, number: Option<String>) -> Self {
+    pub fn number(mut self, number: Option<NumberString>) -> Self {
         self.number = number;
         self
     }
@@ -115,14 +121,12 @@ pub async fn query(
     let location = location.map(|l| l.to_static_str().to_string());
 
     if id.is_some() {
-        let mut id = id.unwrap();
-        if mode == QueryMode::ILike || mode == QueryMode::Like {
-            id = format!("%{}%", id);
-        }
+        let id = id.unwrap();
         rows = rows.bind(id);
     }
     if number.is_some() {
-        let mut number = number.unwrap();
+        //let mut number = number.unwrap().inner();
+        let mut number = number.unwrap().to_string();
         if mode == QueryMode::ILike || mode == QueryMode::Like {
             number = format!("%{}%", number);
         }
@@ -136,7 +140,9 @@ pub async fn query(
         let  location = location.unwrap();
         rows = rows.bind(location);
     }
-    
+    // uncomment to print out query for debugging purposes
+    // use sqlx::Execute;
+    //println!("sql {}", rows.sql());
     let mut rows = rows.fetch(pool);
                    
     while let Some(row) = rows.try_next().await? {
