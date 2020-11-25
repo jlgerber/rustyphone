@@ -1,10 +1,13 @@
 use prettytable::{Row, Cell};
 use crate::PhoneNumber;
 use crate::Location;
-//------------------
-// PhoneRow struct
-//------------------
 
+
+/// Represents a presentation row of phone data as a struct 
+/// with fields whose native types are all wrapped in Options.
+/// This struct is used to transform the data returned from
+/// the database into a reasonable line of information in
+/// the terminal
 #[derive(Debug)]
 pub struct PhoneRow {
     pub ext: Option<PhoneNumber>,

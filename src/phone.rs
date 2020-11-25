@@ -21,8 +21,8 @@ pub struct Phone {
 } 
 
 // custom deserializer for PhoneNumber. Because the different variants
-// of PhoneNumber are indistinguishable based on shape, specifying the 
-// tag as internal does not work. So, we write a little custom deal.
+// of PhoneNumber are indistinguishable based on shape (ie they all just wrap String), 
+// specifying the tag as internal does not work. So, we write a little custom deal.
 fn deserialize_phonenumber<'de, D>(deserializer: D) -> Result<PhoneNumber, D::Error>
 where
     D: de::Deserializer<'de>,
