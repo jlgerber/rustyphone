@@ -125,31 +125,35 @@ ON
 -- ADDPHONE FUNCTION --
 -----------------------
 CREATE OR REPLACE FUNCTION addPhone (
-    login varchar, 
+    login text, 
     number text, 
     category phonecategory, 
     site location
-) RETURNS int AS $$
+) RETURNS INT AS $$
 
-BEGIN
     WITH Y AS 
         (INSERT 
            INTO phone (number, category, location) 
          VALUES (number, category, site)
          ON CONFLICT DO NOTHING
-      RETURNING id), 
+      RETURNING phone.id), 
     X AS 
         (SELECT id 
            FROM person 
           WHERE person.login=addPhone.login)
     INSERT 
       INTO people_phones (person_id, phone_id)
-    SELECT X.id, Y.id 
-      FROM X CROSS JOIN Y;
-    RETURN 1;
-END;
+    SELECT 
+        X.id, Y.id 
+    FROM 
+        X 
+    CROSS JOIN 
+        Y
+    ON CONFLICT DO NOTHING
+    RETURNING 
+        people_phones.phone_id;
 $$
-Language 'plpgsql';
+Language 'sql';
 
 
 CREATE OR REPLACE FUNCTION addPerson(

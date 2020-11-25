@@ -35,7 +35,7 @@ RETURNING id;
 struct Rval {
     id: i32
 }
-pub async fn person<I, J, K, L, M>(pool: &sqlx::PgPool, first: I, last: J, login: K, department: L, title: M) 
+pub async fn create<I, J, K, L, M>(pool: &sqlx::PgPool, first: I, last: J, login: K, department: L, title: M) 
 -> Result<i32, sqlx::Error>
 where
     I: AsRef<str>,
@@ -44,13 +44,13 @@ where
     L: AsRef<str>,
     M: AsRef<str>,
 {
-    let row = sqlx::query(&CREATE_PERSON)
+    let Rval{id} = sqlx::query_as(&CREATE_PERSON)
     .bind(department.as_ref())
     .bind(title.as_ref())
     .bind(first.as_ref())
     .bind(last.as_ref())
     .bind(login.as_ref())
     .fetch_one(pool).await?;
-    let Rval{id} = Rval::from_row(&row).unwrap();
+    //let Rval{id} = Rval::from_row(&row).unwrap();
     Ok(id)
 }

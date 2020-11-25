@@ -1,7 +1,10 @@
+// CRUD
+pub mod create;
+pub mod read;
+pub mod delete;
 
 mod utils;
 mod constants;
-pub mod create;
 mod errors;
 mod location;
 mod mode;
@@ -13,7 +16,6 @@ mod phone_category;
 mod phone_number;
 mod query_mode;
 mod phone_row;
-pub mod read;
 mod traits;
 mod number_string;
 

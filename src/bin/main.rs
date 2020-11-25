@@ -55,12 +55,49 @@ struct Opt {
         cmd: Option<OptSub>
 }
 
+
+
 /// Subcommands
 #[derive(StructOpt, Debug)]
 enum OptSub {
 
     /// Create entities
     Create {
+
+        // /// Provide first name
+        // #[structopt(name = "FIRSTNAME")]
+        // first: String,
+
+        // /// Provide the last name
+        // #[structopt(name = "LASTNAME")]
+        // last: String,
+
+        // /// Provide the login
+        // #[structopt(name = "LOGIN")]
+        // login: String,
+
+        // /// Provide the department
+        // #[structopt(name = "DEPARTMENT")]
+        // department: String,
+
+        // /// Provide the title
+        // #[structopt(name = "TITLE")]
+        // title: String
+        #[structopt(subcommand)]
+        sub: CreateOpt,
+    },
+
+    /// Query entities (like title and department)
+    Read {
+        #[structopt(subcommand)]
+        sub: ReadOpt,
+    }
+}
+
+/// Create Subcommands
+#[derive(StructOpt, Debug)]
+enum CreateOpt {
+    Person {
 
         /// Provide first name
         #[structopt(name = "FIRSTNAME")]
@@ -82,11 +119,24 @@ enum OptSub {
         #[structopt(name = "TITLE")]
         title: String
     },
+    Phone {
 
-    /// Query entities (like title and department)
-    Read {
-        #[structopt(subcommand)]
-        sub: ReadOpt,
+        /// specify the name of your login
+        #[structopt(short, long)]
+        login: String,
+
+        /// Specify the number to match
+        #[structopt(short, long)]
+        number: NumberString,
+
+        /// Specify the category of your phone number
+        #[structopt(short, long)]
+        category: PhoneCategory,
+
+        /// Specify the location of your phone number
+        #[structopt(short, long)]
+        location: Location,
+
     }
 }
 
@@ -338,7 +388,7 @@ async fn process_read_department(json: bool)  -> Result<(), sqlx::Error>
 //
 // process creation of person
 //
-async fn process_create(
+async fn process_create_person(
     first: &str, 
     last:&str, 
     login: &str, 
@@ -349,8 +399,27 @@ async fn process_create(
         .max_connections(1)
         .connect(DB_URL).await?;
         
-    let result = create::person::person(&pool, first, last, login, department, title).await?;
+    let result = create::person::create(&pool, first, last, login, department, title).await?;
     println!("ID: {}", result);
+    Ok(())
+}
+async fn process_create_phone(
+    login: &str, 
+    number:&NumberString, 
+    category: &PhoneCategory, 
+    location: &Location, 
+    
+) -> Result<(),sqlx::Error> {
+    let  pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(DB_URL).await?;
+        
+    let result = create::phone::create(&pool, login, number, category, location).await?;
+    match result {
+        Some(val) => println!("Created Phone with id: {}", val),
+        None => println!("Phone number already exists")
+    };
+    //println!(": {}", result);
     Ok(())
 }
 
@@ -383,6 +452,10 @@ async fn main() -> Result<(), sqlx::Error> {
                 .location(location);
                 process_read_phone(query, QueryMode::ILike, json ).await}
         }
-        Opt{cmd: Some(OptSub::Create{first, last, login, department, title}), ..} => process_create(&first, &last, &login, &department, &title).await,
+        Opt{cmd: Some(OptSub::Create{sub}), ..} => match sub {
+            CreateOpt::Person{first, last, login, department, title} => process_create_person(&first, &last, &login, &department, &title).await,
+            CreateOpt::Phone{login, number, category, location} => process_create_phone(&login, &number, &category, &location).await,
+        }
+        //Opt{cmd: Some(OptSub::Create{first, last, login, department, title}), ..} => process_create(&first, &last, &login, &department, &title).await,
     }
 }
