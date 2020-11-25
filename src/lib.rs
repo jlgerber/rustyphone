@@ -15,6 +15,7 @@ mod query_mode;
 mod phone_row;
 pub mod read;
 mod traits;
+mod number_string;
 
 pub use constants::*;
 pub use errors::{PhoneError, PhoneErrorKind};
@@ -26,6 +27,7 @@ pub use person_view::PersonView;
 pub use phone::Phone;
 pub use phone_category::PhoneCategory;
 pub use phone_number::PhoneNumber;
+pub use number_string::NumberString;
 pub use query_mode::QueryMode;
 pub use phone_row::PhoneRow;
 pub use traits::{Queryable, Selectable, ToStaticStr };
