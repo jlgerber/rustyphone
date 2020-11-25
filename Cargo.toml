@@ -13,6 +13,10 @@ path = "src/bin/main.rs"
 name = "server"
 path = "src/bin/migrate.rs"
 
+[[bin]]
+name = "populate-testdb"
+path = "src/bin/populate_testdb.rs"
+
 [dependencies]
 sqlx = { version = "0.4.1", features = [ "json","postgres", "runtime-async-std-native-tls", "migrate"] }
 async-std = { version = "1.7.0", features = ["attributes"] }
