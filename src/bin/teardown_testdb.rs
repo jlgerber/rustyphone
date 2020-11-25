@@ -4,21 +4,23 @@ use sqlx::postgres::PgConnectOptions;
 
 static DROP: &str = r"
 DROP DATABASE
-    test
-IF EXISTS;
+    test;
+";
+static NEW: &str = r"
 CREATE DATABASE test;
 ";
-
 pub async fn setup(
     mut pool: sqlx::PgConnection, 
 ) -> Result<(), sqlx::Error> {
-    let   rows = sqlx::query(&DROP);
+    let   drop = sqlx::query(&DROP);
     
     // uncomment to print out query for debugging purposes
     // use sqlx::Execute;
     //println!("sql {}", rows.sql());
-    let _ = rows.execute(&mut pool).await?;
-                   
+    let _ = drop.execute(&mut pool).await?;
+    
+    let newdb = sqlx::query(&NEW);
+    let _ = newdb.execute(&mut pool).await?;
     
     Ok(())
 }

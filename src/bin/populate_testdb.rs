@@ -69,7 +69,7 @@ SELECT * FROM addPerson('Robert', 'Beckwith', 'rbeckwith', 'Playa Software', 'En
 SELECT * FROM addPhone('rbeckwith', '3412', 'Extension', 'PlayaVista');
 SELECT * FROM addPhone('rbeckwith', '3108889999', 'Cell', 'PlayaVista');
 
-SELECT * FROM addPerson('Stephen', 'Sloan', 'ssloan', 'Mt Employees', 'Supervisors');
+SELECT * FROM addPerson('Stephen', 'Sloan', 'ssloan', 'Mt Employees', 'Supervisor, Pipeline');
 SELECT * FROM addPhone('ssloan', '9999', 'Extension', 'Montreal');
 
 SELECT * FROM addPerson('Peter', 'Webber', 'pwebber', 'Vancouver Software', 'Engineer, Software');
@@ -79,7 +79,7 @@ SELECT * FROM addPhone('pwebber', '6789991111', 'Home', 'Vancouver');
 
 SELECT * FROM addPerson('Rober', 'Rabbit', 'rrabbit', 'Vancouver Artists', 'Animator');
 SELECT * FROM addPhone('rrabbit', '6100', 'Extension', 'Vancouver');
-SELECT * FROM addPhone('rrabbit', '9994569182', 'Home', 'Vanvouver');
+SELECT * FROM addPhone('rrabbit', '9994569182', 'Home', 'Vancouver');
 
 SELECT * FROM addPerson('Sam', 'Slade', 'sslade', 'Supervisors', 'Supervisor, Integration');
 SELECT * FROM addPhone('sslade', '3567', 'Extension', 'PlayaVista');
@@ -92,7 +92,7 @@ SELECT * FROM addPhone('sbrown', '9991112323', 'Cell', 'Vancouver');
 SELECT * FROM addPerson('John', 'Johanson', 'jjo', 'Vancouver Software', 'Engineer, Software');
 SELECT * FROM addPhone('jjo', '9994445555', 'Cell', 'Vancouver');
 
-SELECT * FROM addPerson('Fredrik', 'Winklerblod', 'fwink', 'Vancouer Artists', 'Animator');
+SELECT * FROM addPerson('Fredrik', 'Winklerblod', 'fwink', 'Vancouver Artists', 'Animator');
 SELECT * FROM addPhone('fwink', '9878', 'Extension', 'Vancouver');
 SELECT * FROM addPhone('fwink', '9879999999', 'Cell', 'Vancouver');
 
@@ -110,12 +110,12 @@ SELECT * FROM addPhone('jmix', '8765', 'Extension', 'Montreal');
 pub async fn setup(
     mut pool: sqlx::PgConnection, 
 ) -> Result<(), sqlx::Error> {
-    let   rows = sqlx::query(&CREATE);
-    
-    // uncomment to print out query for debugging purposes
-    // use sqlx::Execute;
-    //println!("sql {}", rows.sql());
-    let _ = rows.execute(&mut pool).await?;
+
+    for create in CREATE.split(";") {
+
+        let   rows = sqlx::query(&create);
+        let _ = rows.execute(&mut pool).await?;
+    }
                    
     
     Ok(())

@@ -214,7 +214,7 @@ async fn process_read_person(
             match person.phones {
                 None => {
                     // Empty Row Handling
-                    table.add_row(row![" Ext:     H:       ","P:       C:       Loc:       "]);
+                    table.add_row(row![" Ext:     H:             ","P:       C:       Loc:       "]);
                 },
                 // currently, we rely on having at most a single entry for each category. 
                 // this can be upgraded with a bit of work, by keeping track of what has already

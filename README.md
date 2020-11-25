@@ -1,6 +1,15 @@
 # userdb
 The `userdb` crate provides an api for interfacing with the postgres database used to store and present user information, primarily via the `phone` command.
 
+## Setting up the testdb
+Run the following in a shell from the project
+
+```bash
+target/release/teardown-testdb
+sqlx migrate run
+target/release/populate-testdb
+```
+
 ## Developer Notes
 
 ### `Notes On My First Exploration of sqlx`
