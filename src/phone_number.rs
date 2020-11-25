@@ -4,7 +4,7 @@ use crate::PhoneError;
 use std::fmt;
 
 /// Representation of a phone number
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
 pub enum PhoneNumber {
     /// An extension consists of four numbers
     Extension(String),
@@ -35,9 +35,9 @@ impl FromStr for PhoneNumber {
         }
 
         match s {
-            _ if  characters.len() == 4  => Ok(Self::Extension(s.to_string())),
-            _ if characters.len() == 10 => Ok(Self::TenDigit(s.to_string())),
-            _ if characters.len() < 7 => Err(Self::Err::InvalidNumber(s.to_string())),
+            _ if characters.len() == 4  => Ok( Self::Extension( s.to_string() ) ),
+            _ if characters.len() == 10 => Ok( Self::TenDigit( s.to_string() ) ),
+            _ if characters.len() < 7   => Err( Self::Err::InvalidNumber( s.to_string() ) ),
             _ => Ok(Self::Other(s.to_string())),
         }
     }
@@ -46,9 +46,9 @@ impl FromStr for PhoneNumber {
 impl fmt::Display for PhoneNumber {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::TenDigit(tdig) =>  write!(f, "{}-{}-{}", &tdig[0..3], &tdig[3..6], &tdig[6..]),
+            Self::TenDigit(tdig) => write!(f, "{}-{}-{}", &tdig[0..3], &tdig[3..6], &tdig[6..]),
             Self::Extension(ext) => write!(f, "{}", ext),
-            Self::Other(other) => write!(f, "{}", other)
+            Self::Other(other)   => write!(f, "{}", other)
         }
     }
 }
