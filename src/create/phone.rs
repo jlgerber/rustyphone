@@ -29,7 +29,7 @@ where
     K: AsRef<str>,
     L: AsRef<str>,
 {
-    let row = sqlx::query(&CREATE_PERSON)
+    let row = sqlx::query(&CREATE_PHONE)
     .bind(login.as_ref())
     .bind(number.as_ref())
     .bind(category.as_ref())
