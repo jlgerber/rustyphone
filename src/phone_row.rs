@@ -1,15 +1,17 @@
 use prettytable::{Row, Cell};
+use crate::PhoneNumber;
+use crate::Location;
 //------------------
 // PhoneRow struct
 //------------------
 
 #[derive(Debug)]
 pub struct PhoneRow {
-    pub ext: Option<String>,
-    pub home: Option<String>,
-    pub pager: Option<String>,
-    pub cell: Option<String>,
-    pub location: Option<String>
+    pub ext: Option<PhoneNumber>,
+    pub home: Option<PhoneNumber>,
+    pub pager: Option<PhoneNumber>,
+    pub cell: Option<PhoneNumber>,
+    pub location: Option<Location>
 }
 
 impl Default for PhoneRow {
@@ -52,17 +54,10 @@ impl PhoneRow {
 }
 
 
-fn format_phone(num: &Option<String>, label: &str) -> Cell {
+fn format_phone(num: &Option<PhoneNumber>, label: &str) -> Cell {
     if num.is_some() {
-        
-        let num = num.as_deref().unwrap();
-        let ccnt = num.chars().count();
-        if ccnt == 7 {
-            // assuming ascii numbers
-            Cell::new(&format!("{}: {}-{}-{}",label,&num[..3], &num[3..6], &num[6..] ))
-        } else {
-            Cell::new(&format!("{}: {}", label, num))
-        }
+        let num = num.as_ref().unwrap();
+        Cell::new(&format!("{}: {}", label, num))
     } else {
         Cell::new(&format!("{}:     ", label))
     }
