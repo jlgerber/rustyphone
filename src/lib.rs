@@ -31,7 +31,7 @@ pub use number_string::NumberString;
 pub use query_mode::QueryMode;
 pub use phone_row::PhoneRow;
 pub use traits::{Queryable, Selectable, ToStaticStr };
-pub use utils::{JsonAdapter, print_person, where_joiner};
+pub use utils::{JsonAdapter, where_joiner};
 
 pub mod prelude {
     pub use super::{Queryable, Selectable, ToStaticStr};
