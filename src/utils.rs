@@ -1,5 +1,4 @@
 
-use crate::Person;
 use sqlx::FromRow;
 
 /// A little helper function to build up the WHERE clause in 
