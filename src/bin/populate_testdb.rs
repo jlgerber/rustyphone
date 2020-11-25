@@ -130,7 +130,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conn = PgConnectOptions::new()
         .host("localhost")
         .port(5432)
-        .username("postgres").password("example").connect().await?;
+        .database("test")
+        .username("postgres")
+        .password("example")
+        .connect().await?;
     
     let _ = setup(conn).await?; 
     Ok(())
