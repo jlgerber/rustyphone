@@ -14,6 +14,16 @@ pub enum PhoneNumber {
     Other(String),
 }
 
+impl PhoneNumber {
+    /// Return a copy of the inner value as a String.
+    pub fn inner(&self) -> String {
+        match self {
+            Self::Extension(ext) => ext.clone(),
+            Self::TenDigit(tdig) => tdig.clone(),
+            Self::Other(other) => other.clone()
+        }
+    }
+}
 
 impl FromStr for PhoneNumber {
     type Err = PhoneError;
@@ -27,9 +37,9 @@ impl FromStr for PhoneNumber {
         match s {
             _ if  characters.len() == 4  => Ok(Self::Extension(s.to_string())),
             _ if characters.len() == 10 => Ok(Self::TenDigit(s.to_string())),
+            _ if characters.len() < 7 => Err(Self::Err::InvalidNumber(s.to_string())),
             _ => Ok(Self::Other(s.to_string())),
         }
-
     }
 }
 
@@ -53,7 +63,7 @@ mod tests {
         let tests = &[
             ("3103864321", PhoneNumber::TenDigit("3103864321".into())),
             ("4321", PhoneNumber::Extension("4321".into())),
-            ("32345", PhoneNumber::Other("32345".into()))
+            ("32345678", PhoneNumber::Other("32345678".into()))
         ];
         for (num, expect) in tests {
             let results = PhoneNumber::from_str(num).unwrap();
@@ -63,8 +73,11 @@ mod tests {
 
     #[test]
     fn from_str_given_bad_input_should_fail() {
-        let result = PhoneNumber::from_str("afbf356").unwrap_err().kind();
-        assert_eq!(result, PhoneErrorKind::InvalidNumber)
+        let inputs = &["afb123", "123a4567a", "123456", "12345", "123", "12", "1"];
+        for input in inputs {
+            let result = PhoneNumber::from_str(input).unwrap_err().kind();
+            assert_eq!(result, PhoneErrorKind::InvalidNumber)
+        }
     }
 
     #[test]
@@ -79,4 +92,18 @@ mod tests {
             assert_eq!(&results, expect);
         }
     }
+
+    #[test]
+    fn inner_returns_copy_of_inner_string() {
+        let tests = &[
+            ( PhoneNumber::TenDigit("3103864321".into()), "3103864321".to_string()),
+            ( PhoneNumber::Extension("4321".into()), "4321".into()),
+            ( PhoneNumber::Other("32345".into()), "32345".into())
+        ];
+        for (num, expect) in tests {
+            let results = num.inner();
+            assert_eq!(&results, expect);
+        }
+    }
+
 }

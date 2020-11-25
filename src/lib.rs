@@ -25,6 +25,7 @@ pub use person_select::PersonSelect;
 pub use person_view::PersonView;
 pub use phone::Phone;
 pub use phone_category::PhoneCategory;
+pub use phone_number::PhoneNumber;
 pub use query_mode::QueryMode;
 pub use phone_row::PhoneRow;
 pub use traits::{Queryable, Selectable, ToStaticStr };
