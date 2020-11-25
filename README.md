@@ -1,14 +1,15 @@
-# My first exploration of sqlx
+# userdb
+The `userdb` crate provides an api for interfacing with the postgres database used to store and present user information, primarily via the `phone` command.
 
-need 
-to have a postgres db to play with. lets jump to docker:
-[url](https://hub.docker.com/_/postgres)
+## Developer Notes
 
- use stack deploy (swarm) or docker-compose
+### `Notes On My First Exploration of sqlx`
 
-### stack.yml
-```bASh
-# Use postgres/example user/pASsword credentials
+We need to have a postgres db to play with. lets jump to [docker hub](https://hub.docker.com/_/postgres) and use `stack deploy` (swarm) or `docker-compose` to stand one up.
+
+#### `The stack.yml contents`
+```yaml
+# Use postgres/example user/password credentials
 version: '3.1'
 
 services:
@@ -26,13 +27,15 @@ services:
       - 8080:8080
 ```
 
-### execute docker compose
-```bASh
-docker-dompose -f stack.yml up
+#### `Execute docker compose`
+
+```bash
+docker-compose -f stack.yml up
 ```
 
-## queries
-### inserting a number
+### Notes on Sql Usage
+
+#### `Inserting a Number`
 ```sql
 WITH Y AS 
     (INSERT INTO phone (number, category, location) 
@@ -48,7 +51,7 @@ SELECT Y.id, X.id
   FROM X 
  CROSS JOIN Y;
 ```
-### selecting
+#### `selecting info`
 ```sql
 SELECT * 
   FROM 
@@ -60,7 +63,7 @@ SELECT *
   WHERE x.category='extension';
 ```
 
-# building up json
+#### `Returning json`
 ```sql
 SELECT row_to_json(ln) AS personview 
   FROM ( SELECT pv.person_id, pv.first, pv.last, pv.login,
@@ -75,7 +78,7 @@ SELECT row_to_json(ln) AS personview
          FROM personview AS pv
        ) AS ln;
 ```
-# Building up Json with qualifications
+#### `Building up Json with Qualifications`
 
 ```sql
 WITH pview AS
@@ -98,7 +101,7 @@ SELECT row_to_json(ln) AS personview
        ) AS ln;
 ```
 
-# Population
+### Population Of Data
 
 ```sql
 INSERT INTO 
@@ -179,7 +182,7 @@ VALUES
     ('Som', 'Shankar', 'som', (SELECT id FROM cte_dept), ( SELECT id FROM cte_title));
 ```
 
-## aggregating all phones into array
+#### `aggregating all phones into array`
 
 This returns all json
 
@@ -229,7 +232,7 @@ WITH pview AS
     ) AS ln;
 ```
 
-# Examples of sqlx usage from query.rs
+### Examples of sqlx usage from query.rs
 This crate was initally just a way of exploring sqlx.
 These are examples of using different query strategies.
 
