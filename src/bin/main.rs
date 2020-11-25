@@ -15,11 +15,82 @@ use userdb::PhoneCategory;
 use userdb::QueryMode;
 use userdb::read::phone::PhoneQuery;
 use userdb::Location;
-use std::str::FromStr;
 use userdb::prelude::*;
+use userdb::NumberString;
+
 //-------------------------
 // Structopt Structures
 //-------------------------
+
+#[derive(StructOpt, Debug)]
+#[structopt(about="Search for people, and more...")]
+struct Opt {
+
+        /// Fetch phone records for people by full name
+        #[structopt(short, long)]
+        name: Option<String>,
+    
+        /// Fetch phone records for people by login
+        #[structopt(short, long)]
+        login: Option<String>,
+
+        /// Fetch phone records for people by title
+        #[structopt(short, long)]
+        title: Option<String>,
+
+        /// Fetch phone records for people by department
+        #[structopt(short, long)]
+        dept: Option<String>,
+
+        /// Optionally specify the fullname (alternative to using --name flag)
+        #[structopt(name="FULLNAME")]
+        fullname: Option<String>,
+
+        /// Display results as json instead of as a table
+        #[structopt(short,long)]
+        json: bool,
+
+        /// Optional subcommands
+        #[structopt(subcommand)]
+        cmd: Option<OptSub>
+}
+
+/// Subcommands
+#[derive(StructOpt, Debug)]
+enum OptSub {
+
+    /// Create entities
+    Create {
+
+        /// Provide first name
+        #[structopt(name = "FIRSTNAME")]
+        first: String,
+
+        /// Provide the last name
+        #[structopt(name = "LASTNAME")]
+        last: String,
+
+        /// Provide the login
+        #[structopt(name = "LOGIN")]
+        login: String,
+
+        /// Provide the department
+        #[structopt(name = "DEPARTMENT")]
+        department: String,
+
+        /// Provide the title
+        #[structopt(name = "TITLE")]
+        title: String
+    },
+
+    /// Query entities (like title and department)
+    Read {
+        #[structopt(subcommand)]
+        sub: ReadOpt,
+    }
+}
+
+/// Read Subcommands
 #[derive(StructOpt, Debug)]
 enum ReadOpt {
     /// Read contact information about people
@@ -65,7 +136,7 @@ enum ReadOpt {
 
         /// Specify the number to match
         #[structopt(short, long)]
-        number: Option<String>,
+        number: Option<NumberString>,
 
         /// Specify the category of your phone number
         #[structopt(short, long)]
@@ -79,76 +150,7 @@ enum ReadOpt {
         #[structopt(short,long)]
         json: bool,
     }
-
 }
-
-#[derive(StructOpt, Debug)]
-#[structopt(about="Search for people, and more...")]
-struct Opt {
-
-        /// Fetch phone records for people by full name
-        #[structopt(short, long)]
-        name: Option<String>,
-    
-        /// Fetch phone records for people by login
-        #[structopt(short, long)]
-        login: Option<String>,
-
-        /// Fetch phone records for people by title
-        #[structopt(short, long)]
-        title: Option<String>,
-
-        /// Fetch phone records for people by department
-        #[structopt(short, long)]
-        dept: Option<String>,
-
-        /// Optionally specify the fullname (alternative to using --name flag)
-        #[structopt(name="FULLNAME")]
-        fullname: Option<String>,
-
-        /// Display results as json instead of as a table
-        #[structopt(short,long)]
-        json: bool,
-
-        /// Optional subcommands
-        #[structopt(subcommand)]
-        cmd: Option<Opt2>
-}
-
-#[derive(StructOpt, Debug)]
-enum Opt2 {
-
-    /// Create entities
-    Create {
-
-        /// Provide first name
-        #[structopt(name = "FIRSTNAME")]
-        first: String,
-
-        /// Provide the last name
-        #[structopt(name = "LASTNAME")]
-        last: String,
-
-        /// Provide the login
-        #[structopt(name = "LOGIN")]
-        login: String,
-
-        /// Provide the department
-        #[structopt(name = "DEPARTMENT")]
-        department: String,
-
-        /// Provide the title
-        #[structopt(name = "TITLE")]
-        title: String
-    },
-
-    /// Query entities (like title and department)
-    Read {
-        #[structopt(subcommand)]
-        sub: ReadOpt,
-    }
-}
-
 
 //------------------------
 // Async Command Handlers
@@ -220,11 +222,11 @@ async fn process_read_person(
                 Some(phones) => {
                     let mut phonerow = PhoneRow::new();
                     for phone in phones {
-                        match phone.category.as_ref() {
-                            "home" => phonerow.home = Some(phone.number.clone()),
-                            "extension" | "ext" => phonerow.ext = Some(phone.number.clone()),
-                            "cell" => phonerow.cell = Some(phone.number.clone()),
-                            _ => ()
+                        match phone.category {
+                            PhoneCategory::Home => phonerow.home = Some(phone.number.clone()),
+                            PhoneCategory::Extension => phonerow.ext = Some(phone.number.clone()),
+                            PhoneCategory::Cell => phonerow.cell = Some(phone.number.clone()),
+                            
                         }
                         phonerow.location = Some(phone.location.clone());
                     }
@@ -269,8 +271,8 @@ async fn process_read_phone(
             table.add_row(row![
                 phone.phone_id, 
                 phone.number, 
-                PhoneCategory::from_str(&phone.category).unwrap().to_static_str(), 
-                Location::from_str(&phone.location).unwrap().to_static_str()
+                phone.category.to_static_str(), 
+                phone.location.to_static_str()
             ]);
         }
         table.printstd();
@@ -288,7 +290,7 @@ async fn process_read_title(json: bool)  -> Result<(), sqlx::Error>
         .max_connections(1)
         .connect(DB_URL).await?;
     
-    let results = read::title::titleview(&pool).await?;
+    let results = read::title::query(&pool).await?;
     if json {
         let titles = serde_json::to_string_pretty(&results).unwrap();
         println!("{}", titles);
@@ -363,7 +365,7 @@ async fn main() -> Result<(), sqlx::Error> {
                 name = fullname;
             }
             process_read_person(name, login, title, dept, json ).await},
-        Opt{cmd: Some(Opt2::Read{sub}), ..} => match sub {
+        Opt{cmd: Some(OptSub::Read{sub}), ..} => match sub {
             ReadOpt::Person{mut name, login, title, dept, fullname, json} => {
                 if name.is_none() && fullname.is_some() {
                     name = fullname;
@@ -381,6 +383,6 @@ async fn main() -> Result<(), sqlx::Error> {
                 .location(location);
                 process_read_phone(query, QueryMode::ILike, json ).await}
         }
-        Opt{cmd: Some(Opt2::Create{first, last, login, department, title}), ..} => process_create(&first, &last, &login, &department, &title).await,
+        Opt{cmd: Some(OptSub::Create{first, last, login, department, title}), ..} => process_create(&first, &last, &login, &department, &title).await,
     }
 }
