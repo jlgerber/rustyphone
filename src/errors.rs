@@ -1,6 +1,7 @@
 use thiserror::Error;
 use enum_kinds::EnumKind;
 
+/// Custom error enum for the phone project.
 #[derive(Error, Debug, EnumKind)]
 #[enum_kind(PhoneErrorKind)]
 pub enum PhoneError {
