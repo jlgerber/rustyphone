@@ -191,3 +191,107 @@ VALUES
 END;
 $$
 Language 'plpgsql';
+
+------------------------------------------------------------
+-- DELETEPHONEFROMIDS                                     --
+--                                                        --
+-- Given a Person id and a Phone id, do the following     --
+-- (a) delete the person/phone association and            --
+-- (b) delete the phone record itself, as long as it is   --
+--     not shared among people                            --
+------------------------------------------------------------
+CREATE OR REPLACE FUNCTION deletePhoneFromIds(
+    person_id INT,
+    phone_id INT
+    
+) RETURNS int AS $$
+DECLARE
+  relationship_cnt INT := 0;
+BEGIN
+    SELECT 
+        count(people_phones.phone_id)
+    INTO
+        relationship_cnt
+    FROM
+        people_phones
+    WHERE
+        people_phones.person_id = deletePhoneFromIds.person_id;
+    IF relationship_cnt > 0 THEN
+        DELETE FROM 
+            people_phones
+        WHERE
+            people_phones.phone_id = deletePhoneFromIds.phone_id 
+        AND 
+            people_phones.person_id = deletePhoneFromIds.person_id;
+    END IF;
+    IF relationship_cnt = 1 THEN
+        DELETE FROM 
+            phone 
+        WHERE
+            phone.id = deletePhoneFromIds.phone_id;
+    END IF;
+    RETURN 1;
+END;
+$$
+Language 'plpgsql';
+
+
+---------------------------------------------------------
+-- DELETEPHONE                                         --
+--                                                     --
+-- Given a login, a number a category and a location   --
+-- (a) Remove the association between phone and person --
+-- (b) Delete the phone if it is not associated with   --
+--     additional people.                              --
+---------------------------------------------------------
+CREATE OR REPLACE FUNCTION deletePhone(
+    login text, 
+    number text, 
+    category phonecategory,
+    site location
+    
+) RETURNS int AS $$
+DECLARE
+    target_person_id person.id%type;
+    target_phone_id phone.id%type;
+BEGIN
+    SELECT 
+        id 
+    INTO
+        target_person_id
+    FROM
+        person
+    WHERE
+        person.login = deletePhone.login;
+
+    IF NOT found THEN
+        RETURN 0;
+    END IF;
+
+    SELECT 
+        id
+    INTO 
+        target_phone_id
+    FROM 
+        phone
+    WHERE
+        deletePhone.number = phone.number
+    AND
+        deletePhone.category = phone.category
+    AND
+        deletePhone.site = phone.location;
+    
+    IF NOT found THEN 
+        return 0;
+    END IF;
+
+    RETURN (
+        SELECT 
+            * 
+        FROM 
+            deletePhoneFromIds(target_person_id, target_phone_id)
+    );
+END;
+$$
+Language 'plpgsql';
+

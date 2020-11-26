@@ -5,39 +5,10 @@ use sqlx::prelude::*;
 use crate::prelude::*;
 
 const DELETE_PHONE: &str = r"
-WITH phone_cte AS (
-    SELECT 
-        phone_id,
-        person_id
-    FROM 
-        personview
-    WHERE
-        login = $1
-    AND 
-        number = $2
-    AND
-        category = $3::phonecategory
-    AND
-        location = $4::location
-
-)
-DELETE FROM 
-    people_phones 
-WHERE
-    people_phones.person_id in (
-        SELECT 
-            person_id 
-        FROM 
-            phone_cte
-    )
-AND
-    people_phones.phone_id in (
-        SELECT
-            phone_id
-        FROM
-            phone_cte
-    )
-returning phone_id
+SELECT 
+    * 
+FROM 
+    deletePhone($1, $2, $3::phonecategory, $4::location) AS phone_id;
 ";
 
 #[derive(FromRow)]

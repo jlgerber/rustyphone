@@ -479,7 +479,7 @@ async fn process_delete_phone(
         
     let result = delete::person_phone::delete(&pool, login, number, category, location).await?;
     match result {
-        Some(val) => println!("Deleted Phone with id: {}", val),
+        Some(val) => println!("Deleted Phone?: {}", val>0),
         None => println!("Phone number not associated with {}", login)
     };
     Ok(())
