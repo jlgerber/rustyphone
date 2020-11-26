@@ -132,6 +132,11 @@ enum CreateOpt {
         /// Specify the name
         #[structopt(name = "TITLE")]
         title: String,
+    },
+    Department {
+        /// Specify the name
+        #[structopt(name = "DEPARTMENT")]
+        department: String,
     }
 }
 
@@ -492,6 +497,28 @@ async fn process_create_title(
 }
 
 //
+// handle create department request
+//
+async fn process_create_department(
+    department: &str,     
+) -> Result<(),sqlx::Error> {
+    let  pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(DB_URL).await?;
+        
+    let result = create::department::create(&pool, &department).await;
+    let result = match result {
+        Ok(r) => r,
+        Err(sqlx::Error::RowNotFound) =>  None,
+        Err(e) => return Err(e)
+    };
+    match result {
+        Some(val) => println!("Created Department with id: {}", val),
+        None => println!("department '{}' already exists", department)
+    };
+    Ok(())
+}
+//
 // handle delete  record between an individual and a phone request
 //
 async fn process_delete_phone(
@@ -561,6 +588,7 @@ async fn main() -> Result<(), sqlx::Error> {
             CreateOpt::Person{first, last, login, department, title} => process_create_person(&first, &last, &login, &department, &title).await,
             CreateOpt::Phone{login, number, category, location} => process_create_phone(&login, &number, &category, &location).await,
             CreateOpt::Title{title} => process_create_title(&title).await,
+            CreateOpt::Department{department} => process_create_department(&department).await,
         }
         Opt{cmd: Some(OptSub::Delete{sub}), ..} => match sub {
             DeleteOpt::Phone{id: Some(id),..} => process_delete_phone_by_id(id).await,
