@@ -47,7 +47,9 @@ struct Rval {
     id: Option<i32>
 }
 
-/// Delete a phone that matches the provided parameters
+/// Delete a phone record which matches the supplied arguments. 
+/// This method is most likely NOT what you want. Please
+/// use ```person_phone::delete``` instead.
 pub async fn delete<I>(
     pool: &sqlx::PgPool, 
     login: I, 
@@ -65,15 +67,14 @@ where
     .bind(category.to_static_str())
     .bind(location.to_static_str())
     .fetch_one(pool).await?;
-//let Rval{id} = Rval::from_row(&row).unwrap();
     Ok(id)
 }
 
-/// delete phone given its id
+/// delete phone given its id. This is a more direct method which 
+/// simply deletes the phone by its id.
 pub async fn delete_by_id(
     pool: &sqlx::PgPool, 
     id: u32, 
-   
 ) -> Result<Option<i32>, sqlx::Error>
 {
     let Rval{id} = sqlx::query_as(&DELETE_PHONE_ID)

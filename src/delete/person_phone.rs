@@ -11,11 +11,20 @@ FROM
     deletePhone($1, $2, $3::phonecategory, $4::location) AS phone_id;
 ";
 
+const DELETE_PHONE_FROM_IDS: &str = r"
+SELECT
+    *
+FROM
+    deletePhoneFromIds($1, $2) AS phone_id;
+";
 #[derive(FromRow)]
 struct Rval {
     phone_id: Option<i32>
 }
-/// Delete a phone that matches the provided parameters
+
+/// Deletes the association between phone number and person. 
+/// If there are no other persons associated with the phone number
+/// delete the underlying phone number record as well.
 pub async fn delete<I>(
     pool: &sqlx::PgPool, 
     login: I, 
@@ -36,3 +45,21 @@ where
 //let Rval{id} = Rval::from_row(&row).unwrap();
     Ok(phone_id)
 }
+
+/// Deletes the association between phone number and person. 
+/// If there are no other persons associated with the phone number
+/// delete the underlying phone number record as well.
+pub async fn delete_from_ids(
+    pool: &sqlx::PgPool, 
+    person_id: u32,
+    phone_id: u32,
+) -> Result<Option<i32>, sqlx::Error>
+{
+    let Rval{phone_id} = sqlx::query_as(&DELETE_PHONE_FROM_IDS)
+    .bind(person_id)
+    .bind(phone_id)
+    .fetch_one(pool).await?;
+//let Rval{id} = Rval::from_row(&row).unwrap();
+    Ok(phone_id)
+}
+
