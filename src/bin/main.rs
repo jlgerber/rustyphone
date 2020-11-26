@@ -127,6 +127,11 @@ enum CreateOpt {
         #[structopt(short, long)]
         location: Location,
 
+    },
+    Title {
+        /// Specify the name
+        #[structopt(name = "TITLE")]
+        title: String,
     }
 }
 
@@ -464,6 +469,29 @@ async fn process_create_phone(
 }
 
 //
+// handle create title request
+//
+async fn process_create_title(
+    title: &str,     
+) -> Result<(),sqlx::Error> {
+    let  pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(DB_URL).await?;
+        
+    let result = create::title::create(&pool, &title).await;
+    let result = match result {
+        Ok(r) => r,
+        Err(sqlx::Error::RowNotFound) =>  None,
+        Err(e) => return Err(e)
+    };
+    match result {
+        Some(val) => println!("Created Title with id: {}", val),
+        None => println!("Title '{}' already exists", title)
+    };
+    Ok(())
+}
+
+//
 // handle delete  record between an individual and a phone request
 //
 async fn process_delete_phone(
@@ -501,7 +529,6 @@ async fn process_delete_phone_by_id(id: u32) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
-
 #[async_std::main]
 async fn main() -> Result<(), sqlx::Error> {
     // build options from structopt
@@ -533,6 +560,7 @@ async fn main() -> Result<(), sqlx::Error> {
         Opt{cmd: Some(OptSub::Create{sub}), ..} => match sub {
             CreateOpt::Person{first, last, login, department, title} => process_create_person(&first, &last, &login, &department, &title).await,
             CreateOpt::Phone{login, number, category, location} => process_create_phone(&login, &number, &category, &location).await,
+            CreateOpt::Title{title} => process_create_title(&title).await,
         }
         Opt{cmd: Some(OptSub::Delete{sub}), ..} => match sub {
             DeleteOpt::Phone{id: Some(id),..} => process_delete_phone_by_id(id).await,
