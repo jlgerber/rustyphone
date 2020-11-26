@@ -295,3 +295,80 @@ END;
 $$
 Language 'plpgsql';
 
+
+CREATE OR REPLACE FUNCTION deleteDepartment(
+    department TEXT
+) RETURNS INT AS
+$$
+DECLARE
+    dept_persons_cnt INT;
+    dept_id INT;
+BEGIN
+    SELECT 
+        count(personview.department)
+    INTO
+        dept_persons_cnt
+    FROM 
+        personview
+    WHERE
+        personview.department = deleteDepartment.department;
+    IF dept_persons_cnt < 1 THEN
+        DELETE FROM 
+            department
+        INTO   
+            dept_id
+        WHERE 
+            department.name = deleteDepartment.department
+        RETURNING department.id;
+        RETURN dept_id;
+    END IF;
+    RETURN 0;
+END;
+$$
+Language 'plpgsql';
+
+
+CREATE OR REPLACE FUNCTION deleteDepartmentById(
+    id INT
+) RETURNS INT AS
+$$
+DECLARE
+    dept_persons_cnt INT;
+    dept_name TEXT;
+    dept_id INT;
+BEGIN
+    SELECT 
+        department.name
+    INTO
+        dept_name
+    FROM
+        department
+    WHERE
+        department.id = deleteDepartmentById.id;
+    
+    IF NOT found THEN 
+        RETURN 0;
+    END IF;
+
+    SELECT 
+        count(personview.department)
+    INTO
+        dept_persons_cnt
+    FROM 
+        personview
+    WHERE
+        personview.department = dept_name;
+    IF dept_persons_cnt < 1 THEN
+        DELETE FROM 
+            department
+        INTO   
+            dept_id
+        WHERE 
+            department.name = dept_name
+        RETURNING department.id;
+        RETURN dept_id;
+    END IF;
+    RETURN 0;
+END;
+$$
+Language 'plpgsql';

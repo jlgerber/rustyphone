@@ -2,24 +2,25 @@
 //! a phone number and a person, since numbers may be shared (like extensions)
 use std::convert::AsRef;
 use sqlx::prelude::*;
-use crate::prelude::*;
+//use crate::prelude::*;
 
-const DELETE_PHONE: &str = r"
+const DELETE_DEPARTMENT: &str = r"
 SELECT 
     * 
 FROM 
-    deletePhone($1, $2, $3::phonecategory, $4::location) AS phone_id;
+    deleteDepartment($1) AS dept_id;
 ";
 
-const DELETE_PHONE_FROM_IDS: &str = r"
+const DELETE_DEPT_FROM_IDS: &str = r"
 SELECT
     *
 FROM
-    deletePhoneFromIds($1, $2) AS phone_id;
+    deleteDepartmentById($1::INT) AS dept_id;
 ";
+
 #[derive(FromRow)]
 struct Rval {
-    phone_id: Option<i32>
+    dept_id: Option<i32>
 }
 
 /// Deletes the association between phone number and person. 
@@ -27,22 +28,15 @@ struct Rval {
 /// delete the underlying phone number record as well.
 pub async fn delete<I>(
     pool: &sqlx::PgPool, 
-    login: I, 
-    number: &crate::NumberString, 
-    category: &crate::PhoneCategory, 
-    location: &crate::Location
+    department: I, 
 ) -> Result<Option<i32>, sqlx::Error>
 where
     I: AsRef<str>,
 {
-    let number = number.to_string();
-    let Rval{phone_id} = sqlx::query_as(&DELETE_PHONE)
-    .bind(login.as_ref())
-    .bind(number)
-    .bind(category.to_static_str())
-    .bind(location.to_static_str())
+    let Rval{dept_id} = sqlx::query_as(&DELETE_DEPARTMENT)
+    .bind(department.as_ref())
     .fetch_one(pool).await?;
-    Ok(phone_id)
+    Ok(dept_id)
 }
 
 /// Deletes the association between phone number and person. 
@@ -50,14 +44,17 @@ where
 /// delete the underlying phone number record as well.
 pub async fn delete_by_id(
     pool: &sqlx::PgPool, 
-    person_id: u32,
-    phone_id: u32,
+    dept_id: u32,
 ) -> Result<Option<i32>, sqlx::Error>
 {
-    let Rval{phone_id} = sqlx::query_as(&DELETE_PHONE_FROM_IDS)
-    .bind(person_id)
-    .bind(phone_id)
+    let Rval{dept_id} = sqlx::query_as(&DELETE_DEPT_FROM_IDS)
+    .bind(dept_id)
     .fetch_one(pool).await?;
-    Ok(phone_id)
+    if let Some(value) = dept_id {
+        if value == 0 {
+            return Ok(None);
+        }
+    } 
+    Ok(dept_id)
 }
 

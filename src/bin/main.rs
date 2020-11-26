@@ -242,6 +242,15 @@ enum DeleteOpt {
             requires_all = &["login", "number", "category"]
         )]
         location: Option<Location>,
+    },
+    Department {
+        /// Name of the department to delete
+        #[structopt(short, long)]
+        name: Option<String>,
+
+        /// Id of the department to delete
+        #[structopt(short, long)]
+        id: Option<u32>
     }
 }
 
@@ -556,6 +565,34 @@ async fn process_delete_phone_by_id(id: u32) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
+
+async fn process_delete_dept(name: &str) -> Result<(), sqlx::Error> {
+    let  pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(DB_URL).await?;
+        
+    let result = delete::department::delete(&pool, name).await?;
+    match result {
+        Some(val) => println!("Deleted Phone with id: {}", val),
+        None => println!("Dept '{}' does not exist", name)
+    };
+    Ok(())
+}
+
+async fn process_delete_dept_by_id(id: u32) -> Result<(), sqlx::Error> {
+    let  pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(DB_URL).await?;
+        
+    let result = delete::department::delete_by_id(&pool, id).await?;
+    match result {
+        Some(val) => println!("Deleted Department with id: {}", val),
+        None => println!("Department Id '{}' does not exist", id)
+    };
+    Ok(())
+}
+
+
 #[async_std::main]
 async fn main() -> Result<(), sqlx::Error> {
     // build options from structopt
@@ -597,6 +634,8 @@ async fn main() -> Result<(), sqlx::Error> {
                 number: Some(number), 
                 category:Some(category), 
                 location: Some(location),..} => process_delete_phone(&login, &number, &category, &location).await,
+            DeleteOpt::Department{name: Some(value), ..} => process_delete_dept(&value).await,
+            DeleteOpt::Department{id: Some(id),..} => process_delete_dept_by_id(id).await,
                 _ => panic!("Cannot reach here do to requires_all runtime constraints")
         }
     }
