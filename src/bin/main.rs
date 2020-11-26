@@ -514,7 +514,7 @@ async fn process_create_department(
     };
     match result {
         Some(val) => println!("Created Department with id: {}", val),
-        None => println!("department '{}' already exists", department)
+        None => println!("Department '{}' already exists", department)
     };
     Ok(())
 }
