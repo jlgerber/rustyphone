@@ -83,6 +83,7 @@ SELECT * FROM addPhone('rrabbit', '9994569182', 'Home', 'Vancouver');
 
 SELECT * FROM addPerson('Sam', 'Slade', 'sslade', 'Supervisors', 'Supervisor, Integration');
 SELECT * FROM addPhone('sslade', '3567', 'Extension', 'PlayaVista');
+SELECT * FROM addPhone('sslade', '6567', 'Extension', 'Vancouver');
 SELECT * FROM addPhone('sslade', '3103767091', 'Cell', 'PlayaVista');
 
 SELECT * FROM addPerson('Sam', 'Brown', 'sbrown', 'Vancouver Software', 'Engineer, Software');

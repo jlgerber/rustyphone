@@ -1,6 +1,5 @@
-//! Delete a phone number given a person or person id. 
-//! One would probably want to look at person_id::delete 
-//! under normal circumstances...
+//! Delete a person's phone number. More accurately, delete the association between
+//! a phone number and a person, since numbers may be shared (like extensions)
 use std::convert::AsRef;
 use sqlx::prelude::*;
 use crate::prelude::*;
@@ -8,7 +7,8 @@ use crate::prelude::*;
 const DELETE_PHONE: &str = r"
 WITH phone_cte AS (
     SELECT 
-        phone_id 
+        phone_id,
+        person_id
     FROM 
         personview
     WHERE
@@ -22,31 +22,28 @@ WITH phone_cte AS (
 
 )
 DELETE FROM 
-    phone 
+    people_phones 
 WHERE
-    phone.id = (
+    people_phones.person_id in (
         SELECT 
-            phone_id 
+            person_id 
         FROM 
             phone_cte
     )
-RETURNING id
-";
-
-const DELETE_PHONE_ID: &str = r"
-
-DELETE FROM 
-    phone 
-WHERE
-    phone.id = $1
-RETURNING id
+AND
+    people_phones.phone_id in (
+        SELECT
+            phone_id
+        FROM
+            phone_cte
+    )
+returning phone_id
 ";
 
 #[derive(FromRow)]
 struct Rval {
-    id: Option<i32>
+    phone_id: Option<i32>
 }
-
 /// Delete a phone that matches the provided parameters
 pub async fn delete<I>(
     pool: &sqlx::PgPool, 
@@ -59,25 +56,12 @@ where
     I: AsRef<str>,
 {
     let number = number.to_string();
-    let Rval{id} = sqlx::query_as(&DELETE_PHONE)
+    let Rval{phone_id} = sqlx::query_as(&DELETE_PHONE)
     .bind(login.as_ref())
     .bind(number)
     .bind(category.to_static_str())
     .bind(location.to_static_str())
     .fetch_one(pool).await?;
 //let Rval{id} = Rval::from_row(&row).unwrap();
-    Ok(id)
-}
-
-/// delete phone given its id
-pub async fn delete_by_id(
-    pool: &sqlx::PgPool, 
-    id: u32, 
-   
-) -> Result<Option<i32>, sqlx::Error>
-{
-    let Rval{id} = sqlx::query_as(&DELETE_PHONE_ID)
-    .bind(id)
-    .fetch_one(pool).await?;
-    Ok(id)
+    Ok(phone_id)
 }

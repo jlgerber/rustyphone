@@ -2,14 +2,19 @@
 use prettytable::{Table, format};
 use sqlx::postgres::PgPoolOptions;
 use structopt::StructOpt;
+use std::collections::HashMap;
+
+type RowMap = HashMap<Location, PhoneRow>;
 
 // internal
 use userdb::create;
-use userdb::DB_URL;
-use userdb::PersonView;
-use userdb::Phone;
-use userdb::PhoneRow;
 use userdb::read;
+use userdb::delete;
+
+use userdb::DB_URL;
+use userdb::Phone;
+use userdb::PersonView;
+use userdb::PhoneRow;
 use userdb::read::person::PersonQuery;
 use userdb::PhoneCategory;
 use userdb::QueryMode;
@@ -63,26 +68,6 @@ enum OptSub {
 
     /// Create entities
     Create {
-
-        // /// Provide first name
-        // #[structopt(name = "FIRSTNAME")]
-        // first: String,
-
-        // /// Provide the last name
-        // #[structopt(name = "LASTNAME")]
-        // last: String,
-
-        // /// Provide the login
-        // #[structopt(name = "LOGIN")]
-        // login: String,
-
-        // /// Provide the department
-        // #[structopt(name = "DEPARTMENT")]
-        // department: String,
-
-        // /// Provide the title
-        // #[structopt(name = "TITLE")]
-        // title: String
         #[structopt(subcommand)]
         sub: CreateOpt,
     },
@@ -91,6 +76,11 @@ enum OptSub {
     Read {
         #[structopt(subcommand)]
         sub: ReadOpt,
+    },
+
+    Delete {
+        #[structopt(subcommand)]
+        sub: DeleteOpt,
     }
 }
 
@@ -122,7 +112,7 @@ enum CreateOpt {
     Phone {
 
         /// specify the name of your login
-        #[structopt(short, long)]
+        #[structopt(short="u", long)]
         login: String,
 
         /// Specify the number to match
@@ -201,7 +191,49 @@ enum ReadOpt {
         json: bool,
     }
 }
+//
+// DELETE
+//
+/// Delete Subcommands
+#[derive(StructOpt, Debug)]
+enum DeleteOpt {
+    Phone {
+        /// delete by phone id
+        #[structopt(short,long)]
+        id: Option<u32>,
 
+        /// specify the name of your login
+        #[structopt(
+            short="u", long,
+            requires_all = &["number", "category", "location"]
+        )]
+        login: Option<String>,
+
+        /// Specify the number to match
+        #[structopt(
+            short, 
+            long,
+            requires_all = &["login", "category", "location"]
+        )]
+        number: Option<NumberString>,
+
+        /// Specify the category of your phone number
+        #[structopt(
+            short, 
+            long,
+            requires_all = &["login", "number", "location"]
+        )]
+        category: Option<PhoneCategory>,
+
+        /// Specify the location of your phone number
+        #[structopt(
+            short, 
+            long,
+            requires_all = &["login", "number", "category"]
+        )]
+        location: Option<Location>,
+    }
+}
 //------------------------
 // Async Command Handlers
 //------------------------
@@ -254,35 +286,41 @@ async fn process_read_person(
             // we nest two tables for phones in order to achieve a better
             // aesthetic balance in formatting. To pull off this trick
             // prettytable allows us to mbed one table within another.
-            let mut table_r1 = Table::new();
-            let mut table_r2 = Table::new();
-            table_r1.set_format(*format::consts::FORMAT_CLEAN);
-            table_r2.set_format(*format::consts::FORMAT_CLEAN);
+            
     
-            table.add_row(row![format!(" User: {}",person.login), format!("Full Name: {}",person.fullname)]);
-            table.add_row(row![format!(" Dept: {}", person.department), format!("Title: {}", person.title)]);
+            table.add_row(row![format!(" User: {}",person.login), format!(" Full Name: {}",person.fullname)]);
+            table.add_row(row![format!(" Dept: {}", person.department), format!(" Title: {}", person.title)]);
             match person.phones {
                 None => {
                     // Empty Row Handling
                     table.add_row(row![" Ext:     H:             ","P:       C:       Loc:       "]);
                 },
-                // currently, we rely on having at most a single entry for each category. 
-                // this can be upgraded with a bit of work, by keeping track of what has already
-                // been created. Each location will have a vector of phonerow instances
+                // currently, we assume that we will only have at most one of each type of phone per location
                 Some(phones) => {
-                    let mut phonerow = PhoneRow::new();
+                    let mut rowmap = RowMap::new();
                     for phone in phones {
+                        if !rowmap.contains_key(&phone.location) {
+                            let mut phonerow = PhoneRow::new();
+                            phonerow.location = Some(phone.location.clone());
+                            rowmap.insert(phone.location.clone(), phonerow);
+                        }
                         match phone.category {
-                            PhoneCategory::Home => phonerow.home = Some(phone.number.clone()),
-                            PhoneCategory::Extension => phonerow.ext = Some(phone.number.clone()),
-                            PhoneCategory::Cell => phonerow.cell = Some(phone.number.clone()),
+                            PhoneCategory::Home => rowmap.get_mut(&phone.location).unwrap().home = Some(phone.number.clone()),
+                            PhoneCategory::Extension => rowmap.get_mut(&phone.location).unwrap().ext = Some(phone.number.clone()),
+                            PhoneCategory::Cell => rowmap.get_mut(&phone.location).unwrap().cell = Some(phone.number.clone()),
                             
                         }
-                        phonerow.location = Some(phone.location.clone());
+                        
                     }
-                    table_r1.add_row(phonerow.row_left());
-                    table_r2.add_row(phonerow.row_right());
-                    table.add_row(row![table_r1.to_string(), table_r2.to_string()]);
+                    for (_loc,phonerow) in rowmap {
+                        let mut table_r1 = Table::new();
+                        let mut table_r2 = Table::new();
+                        table_r1.set_format(*format::consts::FORMAT_CLEAN);
+                        table_r2.set_format(*format::consts::FORMAT_CLEAN);
+                        table_r1.add_row(phonerow.row_left());
+                        table_r2.add_row(phonerow.row_right());
+                        table.add_row(row![table_r1.to_string(), table_r2.to_string()]);
+                    }
                 }
             }
             table.printstd();
@@ -403,6 +441,10 @@ async fn process_create_person(
     println!("ID: {}", result);
     Ok(())
 }
+
+//
+// process the creation of a phone
+//
 async fn process_create_phone(
     login: &str, 
     number:&NumberString, 
@@ -419,10 +461,44 @@ async fn process_create_phone(
         Some(val) => println!("Created Phone with id: {}", val),
         None => println!("Phone number already exists")
     };
-    //println!(": {}", result);
     Ok(())
 }
 
+//
+// process the deletion of a record between an individual and a phone
+//
+async fn process_delete_phone(
+    login: &str, 
+    number:&NumberString, 
+    category: &PhoneCategory, 
+    location: &Location, 
+    
+) -> Result<(),sqlx::Error> {
+    let  pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(DB_URL).await?;
+        
+    let result = delete::person_phone::delete(&pool, login, number, category, location).await?;
+    match result {
+        Some(val) => println!("Deleted Phone with id: {}", val),
+        None => println!("Phone number not associated with {}", login)
+    };
+    Ok(())
+}
+
+// delete a phone when provided with an id
+async fn process_delete_phone_by_id(id: u32) -> Result<(), sqlx::Error> {
+    let  pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(DB_URL).await?;
+        
+    let result = delete::phone::delete_by_id(&pool, id).await?;
+    match result {
+        Some(val) => println!("Deleted Phone with id: {}", val),
+        None => println!("Id {} does not exist", id)
+    };
+    Ok(())
+}
 
 #[async_std::main]
 async fn main() -> Result<(), sqlx::Error> {
@@ -456,6 +532,14 @@ async fn main() -> Result<(), sqlx::Error> {
             CreateOpt::Person{first, last, login, department, title} => process_create_person(&first, &last, &login, &department, &title).await,
             CreateOpt::Phone{login, number, category, location} => process_create_phone(&login, &number, &category, &location).await,
         }
-        //Opt{cmd: Some(OptSub::Create{first, last, login, department, title}), ..} => process_create(&first, &last, &login, &department, &title).await,
+        Opt{cmd: Some(OptSub::Delete{sub}), ..} => match sub {
+            DeleteOpt::Phone{id: Some(id),..} => process_delete_phone_by_id(id).await,
+            DeleteOpt::Phone{
+                login: Some(login), 
+                number: Some(number), 
+                category:Some(category), 
+                location: Some(location),..} => process_delete_phone(&login, &number, &category, &location).await,
+                _ => panic!("Cannot reach here do to requires_all runtime constraints")
+        }
     }
 }

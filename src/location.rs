@@ -5,7 +5,7 @@ use std::fmt;
 use serde::{Serialize, Deserialize};
 
 /// An enumerated list of DD locations, matching the enum in the database.
-#[derive(Debug,PartialEq, Eq, Serialize, Deserialize, Clone, sqlx::Type)]
+#[derive(Debug,PartialEq, Eq, Serialize, Deserialize, Clone, sqlx::Type, Hash)]
 #[sqlx(rename="location")] //, rename_all = "lowercase")]
 pub enum Location {
     Portland,
