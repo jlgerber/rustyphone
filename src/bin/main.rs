@@ -234,12 +234,13 @@ enum DeleteOpt {
         location: Option<Location>,
     }
 }
+
 //------------------------
 // Async Command Handlers
 //------------------------
 
 //
-// process reading of person
+// handle read person request
 //
 async fn process_read_person(
     name: Option<String>, 
@@ -295,6 +296,7 @@ async fn process_read_person(
                 },
                 // currently, we assume that we will only have at most one of each type of phone per location
                 Some(phones) => {
+                    // rowmap maps location to phonerow
                     let mut rowmap = RowMap::new();
                     for phone in phones {
                         if !rowmap.contains_key(&phone.location) {
@@ -306,18 +308,18 @@ async fn process_read_person(
                             PhoneCategory::Home =>      rowmap.get_mut(&phone.location).unwrap().home = Some(phone.number.clone()),
                             PhoneCategory::Extension => rowmap.get_mut(&phone.location).unwrap().ext  = Some(phone.number.clone()),
                             PhoneCategory::Cell =>      rowmap.get_mut(&phone.location).unwrap().cell = Some(phone.number.clone()),
-                            
                         }
-                        
                     }
-                    for (_loc,phonerow) in rowmap {
-                        let mut table_r1 = Table::new();
-                        let mut table_r2 = Table::new();
-                        table_r1.set_format(*format::consts::FORMAT_CLEAN);
-                        table_r2.set_format(*format::consts::FORMAT_CLEAN);
-                        table_r1.add_row(phonerow.row_left());
-                        table_r2.add_row(phonerow.row_right());
-                        table.add_row(row![table_r1.to_string(), table_r2.to_string()]);
+                    // construct a new table per side. We are embedding the first table
+                    // in the left column, and the second table in the right column
+                    for (_loc, phonerow) in rowmap {
+                        let mut table_l = Table::new();
+                        let mut table_r = Table::new();
+                        table_l.set_format(*format::consts::FORMAT_CLEAN);
+                        table_r.set_format(*format::consts::FORMAT_CLEAN);
+                        table_l.add_row(phonerow.row_left());
+                        table_r.add_row(phonerow.row_right());
+                        table.add_row(row![table_l.to_string(), table_r.to_string()]);
                     }
                 }
             }
@@ -330,9 +332,8 @@ async fn process_read_person(
 }
 
 //
-// process the read phone command
+// handle read phone request
 //
-
 async fn process_read_phone(
     query: PhoneQuery,
     mode: QueryMode,
@@ -367,7 +368,7 @@ async fn process_read_phone(
 }
 
 //
-// Process read title request
+// handle read title request
 //
 async fn process_read_title(json: bool)  -> Result<(), sqlx::Error> 
 {
@@ -394,7 +395,7 @@ async fn process_read_title(json: bool)  -> Result<(), sqlx::Error>
 }
 
 //
-// process read department request
+// handle read  department request
 //
 async fn process_read_department(json: bool)  -> Result<(), sqlx::Error> 
 {
@@ -422,7 +423,7 @@ async fn process_read_department(json: bool)  -> Result<(), sqlx::Error>
 
 
 //
-// process creation of person
+// handle create person request
 //
 async fn process_create_person(
     first: &str, 
@@ -441,7 +442,7 @@ async fn process_create_person(
 }
 
 //
-// process the creation of a phone
+// handle create phone request
 //
 async fn process_create_phone(
     login: &str, 
@@ -463,7 +464,7 @@ async fn process_create_phone(
 }
 
 //
-// process the deletion of a record between an individual and a phone
+// handle delete  record between an individual and a phone request
 //
 async fn process_delete_phone(
     login: &str, 
@@ -484,7 +485,9 @@ async fn process_delete_phone(
     Ok(())
 }
 
-// delete a phone when provided with an id
+//
+// handle delete a phone by id request
+//
 async fn process_delete_phone_by_id(id: u32) -> Result<(), sqlx::Error> {
     let  pool = PgPoolOptions::new()
         .max_connections(1)
@@ -497,6 +500,7 @@ async fn process_delete_phone_by_id(id: u32) -> Result<(), sqlx::Error> {
     };
     Ok(())
 }
+
 
 #[async_std::main]
 async fn main() -> Result<(), sqlx::Error> {
