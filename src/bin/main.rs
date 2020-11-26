@@ -285,15 +285,13 @@ async fn process_read_person(
             table.set_format(*format::consts::FORMAT_CLEAN);
             // we nest two tables for phones in order to achieve a better
             // aesthetic balance in formatting. To pull off this trick
-            // prettytable allows us to mbed one table within another.
-            
-    
-            table.add_row(row![format!(" User: {}",person.login), format!(" Full Name: {}",person.fullname)]);
+            // prettytable allows us to embed one table within another.
+            table.add_row(row![format!(" User: {}", person.login), format!(" Full Name: {}", person.fullname)]);
             table.add_row(row![format!(" Dept: {}", person.department), format!(" Title: {}", person.title)]);
             match person.phones {
                 None => {
                     // Empty Row Handling
-                    table.add_row(row![" Ext:     H:             ","P:       C:       Loc:       "]);
+                    table.add_row(row![" Ext:      H:             ","P:       C:       Loc:       "]);
                 },
                 // currently, we assume that we will only have at most one of each type of phone per location
                 Some(phones) => {
@@ -305,9 +303,9 @@ async fn process_read_person(
                             rowmap.insert(phone.location.clone(), phonerow);
                         }
                         match phone.category {
-                            PhoneCategory::Home => rowmap.get_mut(&phone.location).unwrap().home = Some(phone.number.clone()),
-                            PhoneCategory::Extension => rowmap.get_mut(&phone.location).unwrap().ext = Some(phone.number.clone()),
-                            PhoneCategory::Cell => rowmap.get_mut(&phone.location).unwrap().cell = Some(phone.number.clone()),
+                            PhoneCategory::Home =>      rowmap.get_mut(&phone.location).unwrap().home = Some(phone.number.clone()),
+                            PhoneCategory::Extension => rowmap.get_mut(&phone.location).unwrap().ext  = Some(phone.number.clone()),
+                            PhoneCategory::Cell =>      rowmap.get_mut(&phone.location).unwrap().cell = Some(phone.number.clone()),
                             
                         }
                         

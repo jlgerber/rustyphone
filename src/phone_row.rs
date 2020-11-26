@@ -38,16 +38,16 @@ impl PhoneRow {
         let Self{ext, home,..} = self;
         let mut row = Vec::new();
        
-        row.push(format_phone(ext, "Ext",4));
-        row.push(format_phone(home, "H",12));        
+        row.push(format_phone(ext, "Ext: ",4));
+        row.push(format_phone(home, "H:",12));        
         Row::new(row)
     }
     /// return the right row. 
     pub fn row_right(&self) -> Row {
         let Self{pager, cell, location,..} = self;
         let mut row = Vec::new();
-        row.push(format_phone(pager, "P",4));
-        row.push(format_phone(cell, "C",12));
+        row.push(format_phone(pager, "P:",4));
+        row.push(format_phone(cell, "C:",12));
         match location {
             Some(loc) => row.push(Cell::new(&format!("Loc: {}", loc))),
             None => row.push(Cell::new("Loc:"))
@@ -60,8 +60,8 @@ impl PhoneRow {
 fn format_phone(num: &Option<PhoneNumber>, label: &str, width: u8) -> Cell {
     if num.is_some() {
         let num = num.as_ref().unwrap();
-        Cell::new(&format!("{}: {}", label, num))
+        Cell::new(&format!("{} {}", label, num))
     } else {
-        Cell::new(&format!("{}: {:width$}", label, " ", width=width as usize))
+        Cell::new(&format!("{} {:width$}", label, " ", width=width as usize))
     }
 }
