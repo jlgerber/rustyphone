@@ -42,7 +42,6 @@ where
     .bind(category.to_static_str())
     .bind(location.to_static_str())
     .fetch_one(pool).await?;
-//let Rval{id} = Rval::from_row(&row).unwrap();
     Ok(phone_id)
 }
 
@@ -59,7 +58,6 @@ pub async fn delete_from_ids(
     .bind(person_id)
     .bind(phone_id)
     .fetch_one(pool).await?;
-//let Rval{id} = Rval::from_row(&row).unwrap();
     Ok(phone_id)
 }
 
