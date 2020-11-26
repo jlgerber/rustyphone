@@ -295,7 +295,9 @@ END;
 $$
 Language 'plpgsql';
 
-
+-----------------------------------
+--   DELETEDEPARTMENT
+-----------------------------------
 CREATE OR REPLACE FUNCTION deleteDepartment(
     department TEXT
 ) RETURNS INT AS
@@ -327,7 +329,9 @@ END;
 $$
 Language 'plpgsql';
 
-
+----------------------------------
+-- DELETEDEPARTMENTBYID
+----------------------------------
 CREATE OR REPLACE FUNCTION deleteDepartmentById(
     id INT
 ) RETURNS INT AS
@@ -367,6 +371,90 @@ BEGIN
             department.name = dept_name
         RETURNING department.id;
         RETURN dept_id;
+    END IF;
+    RETURN 0;
+END;
+$$
+Language 'plpgsql';
+
+
+
+-----------------------------------
+--   DELETETITLE
+-----------------------------------
+CREATE OR REPLACE FUNCTION deleteTitle(
+    title TEXT
+) RETURNS INT AS
+$$
+DECLARE
+    title_persons_cnt INT;
+    title_id INT;
+BEGIN
+    SELECT 
+        count(personview.title)
+    INTO
+        title_persons_cnt
+    FROM 
+        personview
+    WHERE
+        personview.title = deleteTitle.title;
+    IF title_persons_cnt < 1 THEN
+        DELETE FROM 
+            title
+        INTO   
+            title_id
+        WHERE 
+            title.name = deleteTitle.title
+        RETURNING title.id;
+        RETURN title_id;
+    END IF;
+    RETURN 0;
+END;
+$$
+Language 'plpgsql';
+
+----------------------------------
+-- DELETETITLEBYID
+----------------------------------
+CREATE OR REPLACE FUNCTION deleteTitleById(
+    id INT
+) RETURNS INT AS
+$$
+DECLARE
+    title_persons_cnt INT;
+    title_name TEXT;
+    title_id INT;
+BEGIN
+    SELECT 
+        title.name
+    INTO
+        title_name
+    FROM
+        title
+    WHERE
+        title.id = deleteTitleById.id;
+    
+    IF NOT found THEN 
+        RETURN 0;
+    END IF;
+
+    SELECT 
+        count(personview.title)
+    INTO
+        title_persons_cnt
+    FROM 
+        personview
+    WHERE
+        personview.title = title_name;
+    IF title_persons_cnt < 1 THEN
+        DELETE FROM 
+            title
+        INTO   
+            title_id
+        WHERE 
+            title.name = title_name
+        RETURNING title.id;
+        RETURN title_id;
     END IF;
     RETURN 0;
 END;

@@ -251,6 +251,15 @@ enum DeleteOpt {
         /// Id of the department to delete
         #[structopt(short, long)]
         id: Option<u32>
+    },
+    Title {
+        /// Name of the title to delete
+        #[structopt(short, long)]
+        name: Option<String>,
+
+        /// Id of the title to delete
+        #[structopt(short, long)]
+        id: Option<u32>
     }
 }
 
@@ -477,7 +486,7 @@ async fn process_create_phone(
     let result = create::phone::create(&pool, login, number, category, location).await?;
     match result {
         Some(val) => println!("Created Phone with id: {}", val),
-        None => println!("Phone number already exists")
+        None => eprintln!("\n\tPhone number already exists")
     };
     Ok(())
 }
@@ -500,7 +509,7 @@ async fn process_create_title(
     };
     match result {
         Some(val) => println!("Created Title with id: {}", val),
-        None => println!("Title '{}' already exists", title)
+        None => eprintln!("\n\tTitle '{}' already exists", title)
     };
     Ok(())
 }
@@ -523,7 +532,7 @@ async fn process_create_department(
     };
     match result {
         Some(val) => println!("Created Department with id: {}", val),
-        None => println!("Department '{}' already exists", department)
+        None => eprintln!("\n\tDepartment '{}' already exists", department)
     };
     Ok(())
 }
@@ -544,7 +553,7 @@ async fn process_delete_phone(
     let result = delete::person_phone::delete(&pool, login, number, category, location).await?;
     match result {
         Some(val) => println!("Deleted Phone?: {}", val>0),
-        None => println!("Phone number not associated with {}", login)
+        None => eprintln!("\n\tPhone number not associated with {}", login)
     };
     Ok(())
 }
@@ -560,7 +569,7 @@ async fn process_delete_phone_by_id(id: u32) -> Result<(), sqlx::Error> {
     let result = delete::phone::delete_by_id(&pool, id).await?;
     match result {
         Some(val) => println!("Deleted Phone with id: {}", val),
-        None => println!("Id {} does not exist", id)
+        None => eprintln!("\n\tId {} does not exist", id)
     };
     Ok(())
 }
@@ -573,8 +582,8 @@ async fn process_delete_dept(name: &str) -> Result<(), sqlx::Error> {
         
     let result = delete::department::delete(&pool, name).await?;
     match result {
-        Some(val) => println!("Deleted Phone with id: {}", val),
-        None => println!("Dept '{}' does not exist", name)
+        Some(val) => println!("Deleted Dept with id: {}", val),
+        None => eprintln!("\n\tDept '{}' does not exist", name)
     };
     Ok(())
 }
@@ -587,7 +596,34 @@ async fn process_delete_dept_by_id(id: u32) -> Result<(), sqlx::Error> {
     let result = delete::department::delete_by_id(&pool, id).await?;
     match result {
         Some(val) => println!("Deleted Department with id: {}", val),
-        None => println!("Department Id '{}' does not exist", id)
+        None => eprintln!("\n\tDepartment Id '{}' does not exist", id)
+    };
+    Ok(())
+}
+
+
+async fn process_delete_title(name: &str) -> Result<(), sqlx::Error> {
+    let  pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(DB_URL).await?;
+        
+    let result = delete::title::delete(&pool, name).await?;
+    match result {
+        Some(val) => println!("Deleted Title with id: {}", val),
+        None => eprintln!("\n\tTitle '{}' does not exist", name)
+    };
+    Ok(())
+}
+
+async fn process_delete_title_by_id(id: u32) -> Result<(), sqlx::Error> {
+    let  pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(DB_URL).await?;
+        
+    let result = delete::title::delete_by_id(&pool, id).await?;
+    match result {
+        Some(val) => println!("Deleted Department with id: {}", val),
+        None => eprintln!("\n\tTitle Id '{}' does not exist", id)
     };
     Ok(())
 }
@@ -634,9 +670,20 @@ async fn main() -> Result<(), sqlx::Error> {
                 number: Some(number), 
                 category:Some(category), 
                 location: Some(location),..} => process_delete_phone(&login, &number, &category, &location).await,
+            DeleteOpt::Phone{..} => panic!("should not reach here"),
             DeleteOpt::Department{name: Some(value), ..} => process_delete_dept(&value).await,
             DeleteOpt::Department{id: Some(id),..} => process_delete_dept_by_id(id).await,
-                _ => panic!("Cannot reach here do to requires_all runtime constraints")
+            DeleteOpt::Department{..} => {
+                eprintln!("\n\tError: Must supply either --id or --name.");
+                std::process::exit(1);
+            },
+
+            DeleteOpt::Title{name: Some(value), ..} => process_delete_title(&value).await,
+            DeleteOpt::Title{id: Some(id),..} => process_delete_title_by_id(id).await,
+            DeleteOpt::Title{..} => {
+                eprintln!("\n\tError: Must supply either --id or --name.");
+                std::process::exit(1);
+            }
         }
     }
 }
