@@ -11,6 +11,12 @@ pub trait Selectable {
 pub trait Queryable {
     fn query(&self, mode: &QueryMode) -> String ;
 }
+/// generate an update string for a sql UPDATE statement based
+/// on the contents of UpdateData.
+pub trait Updateable {
+    fn update(&self, table: &str) -> String;
+}
+
 /// Convert a type to a static str
 pub trait ToStaticStr {
     fn to_static_str(&self) -> &'static str;

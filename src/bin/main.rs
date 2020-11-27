@@ -9,6 +9,7 @@ type RowMap = HashMap<Location, PhoneRow>;
 // internal
 use userdb::create;
 use userdb::read;
+use userdb::update;
 use userdb::delete;
 
 use userdb::DB_URL;
@@ -22,7 +23,7 @@ use userdb::read::phone::PhoneQuery;
 use userdb::Location;
 use userdb::prelude::*;
 use userdb::NumberString;
-
+use userdb::update::person::PersonUpdate;
 //-------------------------
 // Structopt Structures
 //-------------------------
@@ -77,13 +78,20 @@ enum OptSub {
         #[structopt(subcommand)]
         sub: ReadOpt,
     },
-
+    /// Update existing entities
+    Update {
+        #[structopt(subcommand)]
+        sub: UpdateOpt,
+    },
+    /// Delete existing entities
     Delete {
         #[structopt(subcommand)]
         sub: DeleteOpt,
     }
 }
-
+//
+// CREATE
+//
 /// Create Subcommands
 #[derive(StructOpt, Debug)]
 enum CreateOpt {
@@ -140,6 +148,9 @@ enum CreateOpt {
     }
 }
 
+//
+// READ
+//
 /// Read Subcommands
 #[derive(StructOpt, Debug)]
 enum ReadOpt {
@@ -200,6 +211,33 @@ enum ReadOpt {
         #[structopt(short,long)]
         json: bool,
     }
+}
+/// Create Subcommands
+#[derive(StructOpt, Debug)]
+enum UpdateOpt {
+    Person {
+        #[structopt(name="PERSON ID")]
+        id: i32,
+        /// Provide first name
+        #[structopt(short, long )]
+        first: Option<String>,
+
+        /// Provide the last name
+        #[structopt(short, long )]
+        last: Option<String>,
+
+        /// Provide the login
+        #[structopt(short="u", long )]
+        login: Option<String>,
+
+        /// Provide the department id
+        #[structopt(short, long = "dept-id" )]
+        department: Option<i32>,
+
+        /// Provide the title
+        #[structopt(short, long="title-id" )]
+        title: Option<i32>,
+    },
 }
 //
 // DELETE
@@ -546,6 +584,36 @@ async fn process_create_department(
     };
     Ok(())
 }
+
+async fn process_update_person(
+    id: i32, 
+    first: Option<String>, 
+    last: Option<String>, 
+    login: Option<String>, 
+    department: Option<i32>, 
+    title: Option<i32>) -> Result<(), sqlx::Error> 
+    {
+        let pool = PgPoolOptions::new()
+            .max_connections(1)
+            .connect(DB_URL).await?;
+        let person_update = PersonUpdate::new(id)
+                            .first(first)
+                            .last(last)
+                            .login(login)
+                            .department(department)
+                            .title(title);
+        let result = update::person::update(&pool, person_update).await;
+        let result = match result {
+            Ok(r) => r,
+            Err(sqlx::Error::RowNotFound) =>  None,
+            Err(e) => return Err(e)
+        };
+        match result {
+            Some(val) => println!("Updated person with id: {}", val),
+            None => eprintln!("\n\tNothing to do updating person"),
+        };
+        Ok(())
+    }
 //
 // handle delete  record between an individual and a phone request
 //
@@ -700,6 +768,9 @@ async fn main() -> Result<(), sqlx::Error> {
             CreateOpt::Phone{login, number, category, location} => process_create_phone(&login, &number, &category, &location).await,
             CreateOpt::Title{title} => process_create_title(&title).await,
             CreateOpt::Department{department} => process_create_department(&department).await,
+        }
+        Opt{cmd: Some(OptSub::Update{sub}), ..} => match sub {
+            UpdateOpt::Person{id, first, last, login, department, title} => process_update_person(id, first, last, login, department, title).await,
         }
         Opt{cmd: Some(OptSub::Delete{sub}), ..} => match sub {
             DeleteOpt::Phone{id: Some(id),..} => process_delete_phone_by_id(id).await,

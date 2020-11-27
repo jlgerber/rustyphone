@@ -1,6 +1,7 @@
 // CRUD
 pub mod create;
 pub mod read;
+pub mod update;
 pub mod delete;
 
 mod utils;
@@ -32,9 +33,9 @@ pub use phone_number::PhoneNumber;
 pub use number_string::NumberString;
 pub use query_mode::QueryMode;
 pub use phone_row::PhoneRow;
-pub use traits::{Queryable, Selectable, ToStaticStr };
+pub use traits::{Queryable, Selectable, Updateable, ToStaticStr };
 pub use utils::{JsonAdapter, where_joiner};
 
 pub mod prelude {
-    pub use super::{Queryable, Selectable, ToStaticStr};
+    pub use super::{Queryable, Selectable, Updateable, ToStaticStr};
 }
