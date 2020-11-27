@@ -67,6 +67,11 @@ where
     .bind(category.to_static_str())
     .bind(location.to_static_str())
     .fetch_one(pool).await?;
+    if let Some(value) = id {
+        if value == 0 {
+            return Ok(None);
+        }
+    } 
     Ok(id)
 }
 
@@ -80,5 +85,10 @@ pub async fn delete_by_id(
     let Rval{id} = sqlx::query_as(&DELETE_PHONE_ID)
     .bind(id)
     .fetch_one(pool).await?;
+    if let Some(value) = id {
+        if value == 0 {
+            return Ok(None);
+        }
+    } 
     Ok(id)
 }

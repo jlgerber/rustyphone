@@ -460,3 +460,110 @@ BEGIN
 END;
 $$
 Language 'plpgsql';
+
+
+CREATE OR REPLACE FUNCTION deleteOrphanPhoneNumbers() RETURNS INT AS 
+$$
+DECLARE
+   orphan_count INT;
+BEGIN
+    SELECT 
+        count(phone.id)
+    INTO 
+        orphan_count
+    FROM
+        phone
+    WHERE 
+        phone.id NOT IN (
+            SELECT
+                people_phones.phone_id
+            FROM
+                people_phones
+        );
+    DELETE FROM phone
+    WHERE
+        phone.id NOT IN (
+            SELECT
+                people_phones.phone_id 
+            FROM 
+                people_phones
+        );
+    RETURN orphan_count;
+END;
+$$
+Language 'plpgsql';
+
+-- -----------------------------------
+-- --   DELETEPERSON
+-- -----------------------------------
+CREATE OR REPLACE FUNCTION deletePerson(
+    login TEXT
+) RETURNS INT AS
+$$
+DECLARE
+    person_cnt INT;
+BEGIN
+    SELECT  
+        count(person.id)
+    INTO   
+        person_cnt
+    FROM
+        person
+    WHERE
+        person.login = deletePerson.login;
+
+    WITH person_cte AS (
+        SELECT 
+            person.id
+        FROM
+            person
+        WHERE
+            person.login = deletePerson.login
+    )
+    DELETE FROM 
+        people_phones 
+    WHERE
+        people_phones.person_id IN (
+            SELECT 
+                id 
+            FROM 
+                person_cte
+        );
+    WITH person_cte AS (
+        SELECT 
+            person.id
+        FROM
+            person
+        WHERE
+            person.login = deletePerson.login
+    )
+    DELETE FROM 
+        person
+    WHERE 
+        person.id IN (SELECT id FROM person_cte);
+    RETURN person_cnt;
+END;
+$$
+Language 'plpgsql';
+
+-------------------------
+-- DELETEPERSONBYID
+-------------------------
+CREATE OR REPLACE FUNCTION deletePersonById(
+    id INT
+) RETURNS INT AS
+$$
+DECLARE
+    person_cnt INT;
+BEGIN
+
+    DELETE FROM 
+        people_phones 
+    INTO
+        person_cnt
+    WHERE
+        people_phones.person_id = deletePersonById.id;
+    RETURN person_cnt;
+END;
+$$
+Language 'plpgsql';

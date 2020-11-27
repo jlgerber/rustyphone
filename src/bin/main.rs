@@ -243,6 +243,16 @@ enum DeleteOpt {
         )]
         location: Option<Location>,
     },
+    Person {
+         /// Name of the department to delete
+         #[structopt(short, long)]
+         login: Option<String>,
+ 
+         /// Id of the department to delete
+         #[structopt(short, long)]
+         id: Option<u32>
+    },
+
     Department {
         /// Name of the department to delete
         #[structopt(short, long)]
@@ -629,6 +639,34 @@ async fn process_delete_title_by_id(id: u32) -> Result<(), sqlx::Error> {
 }
 
 
+async fn process_delete_person(login: &str) -> Result<(), sqlx::Error> {
+    let  pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(DB_URL).await?;
+        
+    let result = delete::person::delete(&pool, login).await?;
+    match result {
+        Some(val) => println!("Deleted Person with id: {}", val),
+        None => eprintln!("\n\tPerson '{}' does not exist", login)
+    };
+    Ok(())
+}
+
+async fn process_delete_person_by_id(id: u32) -> Result<(), sqlx::Error> {
+    let  pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(DB_URL).await?;
+        
+    let result = delete::person::delete_by_id(&pool, id).await?;
+    match result {
+        Some(val) => println!("Deleted Person with id: {}", val),
+        None => eprintln!("\n\tPerson Id '{}' does not exist", id)
+    };
+    Ok(())
+}
+
+
+
 #[async_std::main]
 async fn main() -> Result<(), sqlx::Error> {
     // build options from structopt
@@ -682,6 +720,13 @@ async fn main() -> Result<(), sqlx::Error> {
             DeleteOpt::Title{id: Some(id),..} => process_delete_title_by_id(id).await,
             DeleteOpt::Title{..} => {
                 eprintln!("\n\tError: Must supply either --id or --name.");
+                std::process::exit(1);
+            },
+
+            DeleteOpt::Person{login: Some(value), ..} => process_delete_person(&value).await,
+            DeleteOpt::Person{id: Some(id),..} => process_delete_person_by_id(id).await,
+            DeleteOpt::Person{..} => {
+                eprintln!("\n\tError: Must supply either --id or --login.");
                 std::process::exit(1);
             }
         }

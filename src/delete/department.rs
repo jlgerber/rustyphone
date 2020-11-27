@@ -36,6 +36,11 @@ where
     let Rval{dept_id} = sqlx::query_as(&DELETE_DEPARTMENT)
     .bind(department.as_ref())
     .fetch_one(pool).await?;
+    if let Some(value) = dept_id {
+        if value == 0 {
+            return Ok(None);
+        }
+    } 
     Ok(dept_id)
 }
 
