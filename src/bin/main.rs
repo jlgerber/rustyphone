@@ -26,6 +26,7 @@ use userdb::prelude::*;
 use userdb::NumberString;
 use userdb::update::person::id::PersonUpdate as PersonUpdateById;
 use userdb::update::person::login::PersonUpdate as PersonUpdateByLogin;
+use userdb::update::phone::id::PhoneUpdate as PhoneUpdateById;
 //-------------------------
 // Structopt Structures
 //-------------------------
@@ -214,7 +215,10 @@ enum ReadOpt {
         json: bool,
     }
 }
-/// Create Subcommands
+//
+// UPDATE
+//
+/// Update Subcommands
 #[derive(StructOpt, Debug)]
 enum UpdateOpt {
     Person {
@@ -247,6 +251,23 @@ enum UpdateOpt {
         /// Optionally provide a title id update
         #[structopt(short, long="title-id" )]
         title: Option<i32>,
+    },
+    Phone {
+        /// Provide the phone's id to apply updates to. 
+        #[structopt(short, long)]
+        id: i32,
+
+        /// Optionally provide number update
+        #[structopt(short, long )]
+        number: Option<NumberString>,
+
+        /// Optionally provide a category update
+        #[structopt(short, long )]
+        category: Option<PhoneCategory>,
+
+        /// Optionally provide a location update
+        #[structopt(short="u", long )]
+        location: Option<Location>,
     },
 }
 //
@@ -638,36 +659,71 @@ async fn process_update_person_by_login(
     last: Option<String>, 
     login: Option<String>, 
     department: Option<i32>, 
-    title: Option<i32>) -> Result<(), sqlx::Error> 
-    {
-        let person_update = PersonUpdateByLogin::new(from_login)
-        .first(first)
-        .last(last)
-        .login(login)
-        .department(department)
-        .title(title);
-        
-        if person_update.is_empty() {
-            eprintln!("\n\t{} Nothing to do updating person. No changes supplied", "Warning:".bright_green());
-            return Ok(());
-        }
-
-        let pool = PgPoolOptions::new()
-            .max_connections(1)
-            .connect(DB_URL).await?;
-
-        let result = update::person::login::update(&pool, person_update).await;
-        let result = match result {
-            Ok(r) => r,
-            Err(sqlx::Error::RowNotFound) =>  None,
-            Err(e) => return Err(e)
-        };
-        match result {
-            Some(val) => println!("Updated person with id: {}", val),
-            None => eprintln!("\n\tNothing to do updating person"),
-        };
-        Ok(())
+    title: Option<i32>) 
+-> Result<(), sqlx::Error> {
+    let person_update = PersonUpdateByLogin::new(from_login)
+    .first(first)
+    .last(last)
+    .login(login)
+    .department(department)
+    .title(title);
+    
+    if person_update.is_empty() {
+        eprintln!("\n\t{} Nothing to do updating person. No changes supplied", "Warning:".bright_green());
+        return Ok(());
     }
+
+    let pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(DB_URL).await?;
+
+    let result = update::person::login::update(&pool, person_update).await;
+    let result = match result {
+        Ok(r) => r,
+        Err(sqlx::Error::RowNotFound) =>  None,
+        Err(e) => return Err(e)
+    };
+    match result {
+        Some(val) => println!("Updated person with id: {}", val),
+        None => eprintln!("\n\tNothing to do updating person"),
+    };
+    Ok(())
+}
+
+async fn process_update_phone_by_id(
+    // the phone's id
+    id: i32, 
+    number: Option<NumberString>, 
+    category: Option<PhoneCategory>, 
+    location: Option<Location>, 
+) -> Result<(), sqlx::Error> 
+{
+    let phone_update = PhoneUpdateById::new(id)
+                        .number(number)
+                        .category(category)
+                        .location(location);
+
+    if phone_update.is_empty() {
+        eprintln!("\n\t{} Nothing to do updating phone. No changes supplied", "Warning:".bright_green());
+        return Ok(());
+    }
+
+    let pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(DB_URL).await?;
+
+    let result = update::phone::id::update(&pool, phone_update).await;
+    let result = match result {
+        Ok(r) => r,
+        Err(sqlx::Error::RowNotFound) =>  None,
+        Err(e) => return Err(e)
+    };
+    match result {
+        Some(val) => println!("Updated phone with id: {}", val),
+        None => eprintln!("\n\tNothing to do updating phone"),
+    };
+    Ok(())
+}
 //
 // handle delete  record between an individual and a phone request
 //
@@ -830,6 +886,7 @@ async fn main() -> Result<(), sqlx::Error> {
                 eprintln!("\n\t{} Must supply either --id or --name.", "Error:".bright_red());
                 std::process::exit(1);
             },
+            UpdateOpt::Phone{id, number, category, location} => process_update_phone_by_id(id, number, category, location).await,
         }
         Opt{cmd: Some(OptSub::Delete{sub}), ..} => match sub {
             DeleteOpt::Phone{id: Some(id),..} => process_delete_phone_by_id(id).await,
