@@ -15,6 +15,7 @@ pub trait Queryable {
 /// on the contents of UpdateData.
 pub trait Updateable {
     fn update(&self, table: &str) -> String;
+    fn is_empty(&self) -> bool;
 }
 
 /// Convert a type to a static str

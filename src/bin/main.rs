@@ -1,4 +1,5 @@
 #[macro_use] extern crate prettytable;
+use colored::*;
 use prettytable::{Table, format};
 use sqlx::postgres::PgPoolOptions;
 use structopt::StructOpt;
@@ -23,7 +24,8 @@ use userdb::read::phone::PhoneQuery;
 use userdb::Location;
 use userdb::prelude::*;
 use userdb::NumberString;
-use userdb::update::person::PersonUpdate;
+use userdb::update::person::id::PersonUpdate as PersonUpdateById;
+use userdb::update::person::login::PersonUpdate as PersonUpdateByLogin;
 //-------------------------
 // Structopt Structures
 //-------------------------
@@ -216,25 +218,33 @@ enum ReadOpt {
 #[derive(StructOpt, Debug)]
 enum UpdateOpt {
     Person {
-        #[structopt(name="PERSON ID")]
-        id: i32,
-        /// Provide first name
+        /// Provide the person's id to apply updates to. 
+        /// One may also select by login using --from-login.
+        #[structopt(short, long)]
+        id: Option<i32>,
+
+        /// Provide the target login to apply the updates to, 
+        /// as an alternative to --id
+        #[structopt(short, long="from-login")]
+        from_login: Option<String>,
+
+        /// Optionally provide first name update
         #[structopt(short, long )]
         first: Option<String>,
 
-        /// Provide the last name
+        /// Optionally provide a last name update
         #[structopt(short, long )]
         last: Option<String>,
 
-        /// Provide the login
+        /// Optionally provide a login update
         #[structopt(short="u", long )]
         login: Option<String>,
 
-        /// Provide the department id
+        /// Optionally provide a department id update
         #[structopt(short, long = "dept-id" )]
         department: Option<i32>,
 
-        /// Provide the title
+        /// Optionally provide a title id update
         #[structopt(short, long="title-id" )]
         title: Option<i32>,
     },
@@ -331,7 +341,7 @@ async fn process_read_person(
        title.is_none() &&
        dept.is_none()
     {
-        eprintln!("\nError: Must provide --name or --login or --title or --dept");
+        eprintln!("\n{}: Must provide --name or --login or --title or --dept", "Error".bright_red());
         std::process::exit(1);
     }
 
@@ -363,12 +373,12 @@ async fn process_read_person(
             // we nest two tables for phones in order to achieve a better
             // aesthetic balance in formatting. To pull off this trick
             // prettytable allows us to embed one table within another.
-            table.add_row(row![format!(" User: {}", person.login), format!(" Full Name: {}", person.fullname)]);
-            table.add_row(row![format!(" Dept: {}", person.department), format!(" Title: {}", person.title)]);
+            table.add_row(row![format!(" {} {}", "User:".bright_blue(), person.login), format!(" {} {}", "Full Name:".bright_blue(), person.fullname)]);
+            table.add_row(row![format!(" {} {}","Dept:".bright_blue(),  person.department), format!(" {} {}","Title:".bright_blue(), person.title)]);
             match person.phones {
                 None => {
                     // Empty Row Handling
-                    table.add_row(row![" Ext:      H:             ","P:       C:       Loc:       "]);
+                    table.add_row(row![" Ext:      H:             ".bright_blue(),"P:       C:       Loc:       ".bright_blue()]);
                 },
                 // currently, we assume that we will only have at most one of each type of phone per location
                 Some(phones) => {
@@ -513,7 +523,7 @@ async fn process_create_person(
         .connect(DB_URL).await?;
         
     let result = create::person::create(&pool, first, last, login, department, title).await?;
-    println!("ID: {}", result);
+    println!("{} {}","ID:".bright_blue(), result);
     Ok(())
 }
 
@@ -534,7 +544,7 @@ async fn process_create_phone(
     let result = create::phone::create(&pool, login, number, category, location).await?;
     match result {
         Some(val) => println!("Created Phone with id: {}", val),
-        None => eprintln!("\n\tPhone number already exists")
+        None => eprintln!("\n\t{} Phone number already exists", "Warning:".bright_green())
     };
     Ok(())
 }
@@ -557,7 +567,7 @@ async fn process_create_title(
     };
     match result {
         Some(val) => println!("Created Title with id: {}", val),
-        None => eprintln!("\n\tTitle '{}' already exists", title)
+        None => eprintln!("\n\t{} Title '{}' already exists", "Warning:".bright_green(), title)
     };
     Ok(())
 }
@@ -580,12 +590,12 @@ async fn process_create_department(
     };
     match result {
         Some(val) => println!("Created Department with id: {}", val),
-        None => eprintln!("\n\tDepartment '{}' already exists", department)
+        None => eprintln!("\n\t{} Department '{}' already exists", "Warning:".bright_green(), department)
     };
     Ok(())
 }
 
-async fn process_update_person(
+async fn process_update_person_by_id(
     id: i32, 
     first: Option<String>, 
     last: Option<String>, 
@@ -593,16 +603,60 @@ async fn process_update_person(
     department: Option<i32>, 
     title: Option<i32>) -> Result<(), sqlx::Error> 
     {
+        let person_update = PersonUpdateById::new(id)
+        .first(first)
+        .last(last)
+        .login(login)
+        .department(department)
+        .title(title);
+
+        if person_update.is_empty() {
+            eprintln!("\n\t{} Nothing to do updating person. No changes supplied", "Warning:".bright_green());
+            return Ok(());
+        }
+
         let pool = PgPoolOptions::new()
             .max_connections(1)
             .connect(DB_URL).await?;
-        let person_update = PersonUpdate::new(id)
-                            .first(first)
-                            .last(last)
-                            .login(login)
-                            .department(department)
-                            .title(title);
-        let result = update::person::update(&pool, person_update).await;
+
+        let result = update::person::id::update(&pool, person_update).await;
+        let result = match result {
+            Ok(r) => r,
+            Err(sqlx::Error::RowNotFound) =>  None,
+            Err(e) => return Err(e)
+        };
+        match result {
+            Some(val) => println!("Updated person with id: {}", val),
+            None => eprintln!("\n\tNothing to do updating person"),
+        };
+        Ok(())
+    }
+
+async fn process_update_person_by_login(
+    from_login: String, 
+    first: Option<String>, 
+    last: Option<String>, 
+    login: Option<String>, 
+    department: Option<i32>, 
+    title: Option<i32>) -> Result<(), sqlx::Error> 
+    {
+        let person_update = PersonUpdateByLogin::new(from_login)
+        .first(first)
+        .last(last)
+        .login(login)
+        .department(department)
+        .title(title);
+        
+        if person_update.is_empty() {
+            eprintln!("\n\t{} Nothing to do updating person. No changes supplied", "Warning:".bright_green());
+            return Ok(());
+        }
+
+        let pool = PgPoolOptions::new()
+            .max_connections(1)
+            .connect(DB_URL).await?;
+
+        let result = update::person::login::update(&pool, person_update).await;
         let result = match result {
             Ok(r) => r,
             Err(sqlx::Error::RowNotFound) =>  None,
@@ -631,7 +685,7 @@ async fn process_delete_phone(
     let result = delete::person_phone::delete(&pool, login, number, category, location).await?;
     match result {
         Some(val) => println!("Deleted Phone?: {}", val>0),
-        None => eprintln!("\n\tPhone number not associated with {}", login)
+        None => eprintln!("\n\t{} Phone number not associated with {}", "Warning:".bright_green(), login)
     };
     Ok(())
 }
@@ -647,7 +701,7 @@ async fn process_delete_phone_by_id(id: u32) -> Result<(), sqlx::Error> {
     let result = delete::phone::delete_by_id(&pool, id).await?;
     match result {
         Some(val) => println!("Deleted Phone with id: {}", val),
-        None => eprintln!("\n\tId {} does not exist", id)
+        None => eprintln!("\n\t{} Id {} does not exist","Warning:".bright_green(), id)
     };
     Ok(())
 }
@@ -661,7 +715,7 @@ async fn process_delete_dept(name: &str) -> Result<(), sqlx::Error> {
     let result = delete::department::delete(&pool, name).await?;
     match result {
         Some(val) => println!("Deleted Dept with id: {}", val),
-        None => eprintln!("\n\tDept '{}' does not exist", name)
+        None => eprintln!("\n\t{} Dept '{}' does not exist","Warning:".bright_green(), name)
     };
     Ok(())
 }
@@ -674,7 +728,7 @@ async fn process_delete_dept_by_id(id: u32) -> Result<(), sqlx::Error> {
     let result = delete::department::delete_by_id(&pool, id).await?;
     match result {
         Some(val) => println!("Deleted Department with id: {}", val),
-        None => eprintln!("\n\tDepartment Id '{}' does not exist", id)
+        None => eprintln!("\n\t{} Department Id '{}' does not exist", "Warning:".bright_green(), id)
     };
     Ok(())
 }
@@ -688,7 +742,7 @@ async fn process_delete_title(name: &str) -> Result<(), sqlx::Error> {
     let result = delete::title::delete(&pool, name).await?;
     match result {
         Some(val) => println!("Deleted Title with id: {}", val),
-        None => eprintln!("\n\tTitle '{}' does not exist", name)
+        None => eprintln!("\n\t{} Title '{}' does not exist", "Warning:".bright_green(),name)
     };
     Ok(())
 }
@@ -701,7 +755,7 @@ async fn process_delete_title_by_id(id: u32) -> Result<(), sqlx::Error> {
     let result = delete::title::delete_by_id(&pool, id).await?;
     match result {
         Some(val) => println!("Deleted Department with id: {}", val),
-        None => eprintln!("\n\tTitle Id '{}' does not exist", id)
+        None => eprintln!("\n\t{} Title Id '{}' does not exist","Warning:".bright_green(), id)
     };
     Ok(())
 }
@@ -715,7 +769,7 @@ async fn process_delete_person(login: &str) -> Result<(), sqlx::Error> {
     let result = delete::person::delete(&pool, login).await?;
     match result {
         Some(val) => println!("Deleted Person with id: {}", val),
-        None => eprintln!("\n\tPerson '{}' does not exist", login)
+        None => eprintln!("\n\t{} Person '{}' does not exist", "Warning:".bright_green(), login)
     };
     Ok(())
 }
@@ -770,7 +824,12 @@ async fn main() -> Result<(), sqlx::Error> {
             CreateOpt::Department{department} => process_create_department(&department).await,
         }
         Opt{cmd: Some(OptSub::Update{sub}), ..} => match sub {
-            UpdateOpt::Person{id, first, last, login, department, title} => process_update_person(id, first, last, login, department, title).await,
+            UpdateOpt::Person{ id: Some(id), first, last, login, department, title,..} => process_update_person_by_id(id, first, last, login, department, title).await,
+            UpdateOpt::Person{ from_login: Some(from_login), first, last, login, department, title,..} => process_update_person_by_login(from_login, first, last, login, department, title).await,
+            UpdateOpt::Person{..} => {
+                eprintln!("\n\t{} Must supply either --id or --name.", "Error:".bright_red());
+                std::process::exit(1);
+            },
         }
         Opt{cmd: Some(OptSub::Delete{sub}), ..} => match sub {
             DeleteOpt::Phone{id: Some(id),..} => process_delete_phone_by_id(id).await,
@@ -783,21 +842,21 @@ async fn main() -> Result<(), sqlx::Error> {
             DeleteOpt::Department{name: Some(value), ..} => process_delete_dept(&value).await,
             DeleteOpt::Department{id: Some(id),..} => process_delete_dept_by_id(id).await,
             DeleteOpt::Department{..} => {
-                eprintln!("\n\tError: Must supply either --id or --name.");
+                eprintln!("\n\t{} Must supply either --id or --name.", "Error:".bright_red());
                 std::process::exit(1);
             },
 
             DeleteOpt::Title{name: Some(value), ..} => process_delete_title(&value).await,
             DeleteOpt::Title{id: Some(id),..} => process_delete_title_by_id(id).await,
             DeleteOpt::Title{..} => {
-                eprintln!("\n\tError: Must supply either --id or --name.");
+                eprintln!("\n\t{} Must supply either --id or --name.", "Error:".bright_red());
                 std::process::exit(1);
             },
 
             DeleteOpt::Person{login: Some(value), ..} => process_delete_person(&value).await,
             DeleteOpt::Person{id: Some(id),..} => process_delete_person_by_id(id).await,
             DeleteOpt::Person{..} => {
-                eprintln!("\n\tError: Must supply either --id or --login.");
+                eprintln!("\n\t{} Must supply either --id or --login.", "Error:".bright_red());
                 std::process::exit(1);
             }
         }
