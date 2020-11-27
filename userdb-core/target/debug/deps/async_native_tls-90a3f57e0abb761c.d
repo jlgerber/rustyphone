@@ -1,0 +1,11 @@
+/home/jgerber/src/rust/3ps/databases/postgres/sqlx/first/target/debug/deps/async_native_tls-90a3f57e0abb761c.rmeta: /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/lib.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/acceptor.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/connector.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/handshake.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/runtime.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/std_adapter.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/tls_stream.rs
+
+/home/jgerber/src/rust/3ps/databases/postgres/sqlx/first/target/debug/deps/async_native_tls-90a3f57e0abb761c.d: /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/lib.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/acceptor.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/connector.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/handshake.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/runtime.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/std_adapter.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/tls_stream.rs
+
+/home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/lib.rs:
+/home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/acceptor.rs:
+/home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/connector.rs:
+/home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/handshake.rs:
+/home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/runtime.rs:
+/home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/std_adapter.rs:
+/home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/async-native-tls-0.3.3/src/tls_stream.rs:

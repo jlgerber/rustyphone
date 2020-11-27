@@ -1,0 +1,11 @@
+/home/jgerber/src/rust/3ps/databases/postgres/sqlx/first/target/debug/deps/futures_task-4a97288d1f80bf67.rmeta: /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/lib.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/spawn.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/future_obj.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/noop_waker.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/arc_wake.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/waker.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/waker_ref.rs
+
+/home/jgerber/src/rust/3ps/databases/postgres/sqlx/first/target/debug/deps/futures_task-4a97288d1f80bf67.d: /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/lib.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/spawn.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/future_obj.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/noop_waker.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/arc_wake.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/waker.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/waker_ref.rs
+
+/home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/lib.rs:
+/home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/spawn.rs:
+/home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/future_obj.rs:
+/home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/noop_waker.rs:
+/home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/arc_wake.rs:
+/home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/waker.rs:
+/home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-task-0.3.8/src/waker_ref.rs:

@@ -1,0 +1,10 @@
+/home/jgerber/src/rust/3ps/databases/postgres/sqlx/first/target/release/deps/libstructopt_derive-a58760a2c95f2f67.so: /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/structopt-derive-0.4.13/src/lib.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/structopt-derive-0.4.13/src/attrs.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/structopt-derive-0.4.13/src/doc_comments.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/structopt-derive-0.4.13/src/parse.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/structopt-derive-0.4.13/src/spanned.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/structopt-derive-0.4.13/src/ty.rs
+
+/home/jgerber/src/rust/3ps/databases/postgres/sqlx/first/target/release/deps/structopt_derive-a58760a2c95f2f67.d: /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/structopt-derive-0.4.13/src/lib.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/structopt-derive-0.4.13/src/attrs.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/structopt-derive-0.4.13/src/doc_comments.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/structopt-derive-0.4.13/src/parse.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/structopt-derive-0.4.13/src/spanned.rs /home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/structopt-derive-0.4.13/src/ty.rs
+
+/home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/structopt-derive-0.4.13/src/lib.rs:
+/home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/structopt-derive-0.4.13/src/attrs.rs:
+/home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/structopt-derive-0.4.13/src/doc_comments.rs:
+/home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/structopt-derive-0.4.13/src/parse.rs:
+/home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/structopt-derive-0.4.13/src/spanned.rs:
+/home/jgerber/.cargo/registry/src/github.com-1ecc6299db9ec823/structopt-derive-0.4.13/src/ty.rs:
