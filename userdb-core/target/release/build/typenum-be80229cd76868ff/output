@@ -1,2 +1,0 @@
-cargo:rustc-env=TYPENUM_BUILD_CONSTS=/home/jgerber/src/rust/3ps/databases/postgres/sqlx/first/target/release/build/typenum-be80229cd76868ff/out/consts.rs
-cargo:rustc-env=TYPENUM_BUILD_OP=/home/jgerber/src/rust/3ps/databases/postgres/sqlx/first/target/release/build/typenum-be80229cd76868ff/out/op.rs
