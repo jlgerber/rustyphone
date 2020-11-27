@@ -14,7 +14,7 @@ pub trait Queryable {
 /// generate an update string for a sql UPDATE statement based
 /// on the contents of UpdateData.
 pub trait Updateable {
-    fn update(&self, table: &str) -> String;
+    fn update(&self) -> String;
     fn is_empty(&self) -> bool;
 }
 

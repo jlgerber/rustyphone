@@ -23,10 +23,10 @@ pub mod id {
             self.location.is_none()
         }
 
-        fn update(&self, table: &str) -> String {
+        fn update(&self) -> String {
             let mut retval = r"
             UPDATE 
-                ".to_owned() + table;
+                phone".to_owned();
             // count starts at 1, but we are already using $1 in the
             // where clause. So our first variable will be $2
             let mut cnt = 2;
@@ -89,7 +89,7 @@ pub mod id {
     /// Update a person, based on the supplied values.
     pub async fn update(pool: &sqlx::PgPool, inputs: PhoneUpdate) -> Result<Option<i32>, sqlx::Error> {  
 
-        let update_statement = inputs.update("phone");
+        let update_statement = inputs.update();
         //println!("{}", &update_statement);
         let PhoneUpdate{id, number, category, location} = inputs;
         let mut update= sqlx::query_as(&update_statement).bind(id);

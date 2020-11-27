@@ -25,10 +25,10 @@ pub mod id {
             self.title.is_none()
         }
 
-        fn update(&self, table: &str) -> String {
+        fn update(&self) -> String {
             let mut retval = r"
             UPDATE 
-                ".to_owned() + table;
+                person".to_owned();
             // count starts at 1, but we are already using $1 in the
             // where clause. So our first variable will be $2
             let mut cnt = 2;
@@ -110,7 +110,7 @@ pub mod id {
     /// Update a person, based on the supplied values.
     pub async fn update(pool: &sqlx::PgPool, inputs: PersonUpdate) -> Result<Option<i32>, sqlx::Error> {  
 
-        let update_statement = inputs.update("person");
+        let update_statement = inputs.update();
         //println!("{}", &update_statement);
         let PersonUpdate{id, login, first, last, department, title} = inputs;
         let mut update= sqlx::query_as(&update_statement).bind(id);
@@ -159,10 +159,10 @@ pub mod login {
             self.title.is_none()
         }
 
-        fn update(&self, table: &str) -> String {
+        fn update(&self) -> String {
             let mut retval = r"
             UPDATE 
-                ".to_owned() + table;
+                person".to_owned();
             // count starts at 1, but we are already using $1 in the
             // where clause. So our first variable will be $2
             let mut cnt = 2;
@@ -244,7 +244,7 @@ pub mod login {
     /// Update a person, based on the supplied values.
     pub async fn update(pool: &sqlx::PgPool, inputs: PersonUpdate) -> Result<Option<i32>, sqlx::Error> {  
 
-        let update_statement = inputs.update("person");
+        let update_statement = inputs.update();
         //println!("{}", &update_statement);
         let PersonUpdate{current_login, login, first, last, department, title} = inputs;
         let mut update= sqlx::query_as(&update_statement).bind(current_login);

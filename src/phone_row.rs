@@ -50,8 +50,8 @@ impl PhoneRow {
         row.push(format_phone(pager, "P:",4));
         row.push(format_phone(cell, "C:",12));
         match location {
-            Some(loc) => row.push(Cell::new(&format!("{} {}","Loc:".bright_blue(), loc))),
-            None => row.push(Cell::new(&format!("{}", "Loc:".bright_blue())))
+            Some(loc) => row.push(Cell::new(&format!("{} {}","Loc:".bright_cyan(), loc))),
+            None => row.push(Cell::new(&format!("{}", "Loc:".bright_cyan())))
         };
         Row::new(row)
     }
@@ -61,8 +61,8 @@ impl PhoneRow {
 fn format_phone(num: &Option<PhoneNumber>, label: &str, width: u8) -> Cell {
     if num.is_some() {
         let num = num.as_ref().unwrap();
-        Cell::new(&format!("{} {}", label.bright_blue(), num))
+        Cell::new(&format!("{} {}", label.bright_cyan(), num))
     } else {
-        Cell::new(&format!("{} {:width$}", label.bright_blue(), " ", width=width as usize))
+        Cell::new(&format!("{} {:width$}", label.bright_cyan(), " ", width=width as usize))
     }
 }

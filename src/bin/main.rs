@@ -27,6 +27,8 @@ use userdb::NumberString;
 use userdb::update::person::id::PersonUpdate as PersonUpdateById;
 use userdb::update::person::login::PersonUpdate as PersonUpdateByLogin;
 use userdb::update::phone::id::PhoneUpdate as PhoneUpdateById;
+use userdb::update::title::id::TitleUpdate as TitleUpdateById;
+
 //-------------------------
 // Structopt Structures
 //-------------------------
@@ -269,6 +271,15 @@ enum UpdateOpt {
         #[structopt(short="u", long )]
         location: Option<Location>,
     },
+    Title {
+        /// Provide the phone's id to apply updates to. 
+        #[structopt(name = "ID")]
+        id: i32,
+
+        /// provide name update
+        #[structopt(name = "NAME")]
+        name: String,
+    }
 }
 //
 // DELETE
@@ -394,12 +405,12 @@ async fn process_read_person(
             // we nest two tables for phones in order to achieve a better
             // aesthetic balance in formatting. To pull off this trick
             // prettytable allows us to embed one table within another.
-            table.add_row(row![format!(" {} {}", "User:".bright_blue(), person.login), format!(" {} {}", "Full Name:".bright_blue(), person.fullname)]);
-            table.add_row(row![format!(" {} {}","Dept:".bright_blue(),  person.department), format!(" {} {}","Title:".bright_blue(), person.title)]);
+            table.add_row(row![format!(" {} {}", "User:".bright_cyan(), person.login), format!(" {} {}", "Full Name:".bright_cyan(), person.fullname)]);
+            table.add_row(row![format!(" {} {}","Dept:".bright_cyan(),  person.department), format!(" {} {}","Title:".bright_cyan(), person.title)]);
             match person.phones {
                 None => {
                     // Empty Row Handling
-                    table.add_row(row![" Ext:      H:             ".bright_blue(),"P:       C:       Loc:       ".bright_blue()]);
+                    table.add_row(row![" Ext:      H:             ".bright_cyan(),"P:       C:       Loc:       ".bright_cyan()]);
                 },
                 // currently, we assume that we will only have at most one of each type of phone per location
                 Some(phones) => {
@@ -544,7 +555,7 @@ async fn process_create_person(
         .connect(DB_URL).await?;
         
     let result = create::person::create(&pool, first, last, login, department, title).await?;
-    println!("{} {}","ID:".bright_blue(), result);
+    println!("{} {}","ID:".bright_green(), result);
     Ok(())
 }
 
@@ -588,7 +599,7 @@ async fn process_create_title(
     };
     match result {
         Some(val) => println!("Created Title with id: {}", val),
-        None => eprintln!("\n\t{} Title '{}' already exists", "Warning:".bright_green(), title)
+        None => eprintln!("\n\t{} Title '{}' already exists", "Warning:".bright_cyan(), title)
     };
     Ok(())
 }
@@ -724,6 +735,32 @@ async fn process_update_phone_by_id(
     };
     Ok(())
 }
+
+
+async fn process_update_title_by_id(
+    // the phone's id
+    id: i32, 
+    name: String, 
+) -> Result<(), sqlx::Error> 
+{
+    let title_update = TitleUpdateById::new(id, name);
+   
+    let pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(DB_URL).await?;
+
+    let result = update::title::id::update(&pool, title_update).await;
+    let result = match result {
+        Ok(r) => r,
+        Err(sqlx::Error::RowNotFound) =>  None,
+        Err(e) => return Err(e)
+    };
+    match result {
+        Some(val) => println!("Updated title with id: {}", val),
+        None => eprintln!("\n\tNothing to do updating title"),
+    };
+    Ok(())
+}
 //
 // handle delete  record between an individual and a phone request
 //
@@ -771,7 +808,7 @@ async fn process_delete_dept(name: &str) -> Result<(), sqlx::Error> {
     let result = delete::department::delete(&pool, name).await?;
     match result {
         Some(val) => println!("Deleted Dept with id: {}", val),
-        None => eprintln!("\n\t{} Dept '{}' does not exist","Warning:".bright_green(), name)
+        None => eprintln!("\n\t{} Dept '{}' does not exist","Warning:".bright_cyan(), name)
     };
     Ok(())
 }
@@ -798,7 +835,7 @@ async fn process_delete_title(name: &str) -> Result<(), sqlx::Error> {
     let result = delete::title::delete(&pool, name).await?;
     match result {
         Some(val) => println!("Deleted Title with id: {}", val),
-        None => eprintln!("\n\t{} Title '{}' does not exist", "Warning:".bright_green(),name)
+        None => eprintln!("\n\t{} Title '{}' does not exist", "Warning:".bright_cyan(),name)
     };
     Ok(())
 }
@@ -887,6 +924,7 @@ async fn main() -> Result<(), sqlx::Error> {
                 std::process::exit(1);
             },
             UpdateOpt::Phone{id, number, category, location} => process_update_phone_by_id(id, number, category, location).await,
+            UpdateOpt::Title{id, name} => process_update_title_by_id(id, name).await,
         }
         Opt{cmd: Some(OptSub::Delete{sub}), ..} => match sub {
             DeleteOpt::Phone{id: Some(id),..} => process_delete_phone_by_id(id).await,
