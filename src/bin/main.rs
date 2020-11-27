@@ -28,6 +28,7 @@ use userdb::update::person::id::PersonUpdate as PersonUpdateById;
 use userdb::update::person::login::PersonUpdate as PersonUpdateByLogin;
 use userdb::update::phone::id::PhoneUpdate as PhoneUpdateById;
 use userdb::update::title::id::TitleUpdate as TitleUpdateById;
+use userdb::update::department::id::DepartmentUpdate as DepartmentUpdateById;
 
 //-------------------------
 // Structopt Structures
@@ -272,7 +273,16 @@ enum UpdateOpt {
         location: Option<Location>,
     },
     Title {
-        /// Provide the phone's id to apply updates to. 
+        /// Provide the title's id to apply updates to. 
+        #[structopt(name = "ID")]
+        id: i32,
+
+        /// provide name update
+        #[structopt(name = "NAME")]
+        name: String,
+    },
+    Department {
+        /// Provide the department's id to apply updates to. 
         #[structopt(name = "ID")]
         id: i32,
 
@@ -761,6 +771,32 @@ async fn process_update_title_by_id(
     };
     Ok(())
 }
+
+
+async fn process_update_dept_by_id(
+    // the phone's id
+    id: i32, 
+    name: String, 
+) -> Result<(), sqlx::Error> 
+{
+    let department_update = DepartmentUpdateById::new(id, name);
+   
+    let pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(DB_URL).await?;
+
+    let result = update::department::id::update(&pool, department_update).await;
+    let result = match result {
+        Ok(r) => r,
+        Err(sqlx::Error::RowNotFound) =>  None,
+        Err(e) => return Err(e)
+    };
+    match result {
+        Some(val) => println!("Updated department with id: {}", val),
+        None => eprintln!("\n\tNothing to do updating department"),
+    };
+    Ok(())
+}
 //
 // handle delete  record between an individual and a phone request
 //
@@ -925,6 +961,7 @@ async fn main() -> Result<(), sqlx::Error> {
             },
             UpdateOpt::Phone{id, number, category, location} => process_update_phone_by_id(id, number, category, location).await,
             UpdateOpt::Title{id, name} => process_update_title_by_id(id, name).await,
+            UpdateOpt::Department{id, name} => process_update_dept_by_id(id, name).await,
         }
         Opt{cmd: Some(OptSub::Delete{sub}), ..} => match sub {
             DeleteOpt::Phone{id: Some(id),..} => process_delete_phone_by_id(id).await,
