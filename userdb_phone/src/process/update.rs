@@ -1,12 +1,10 @@
 
 use colored::*;
 use sqlx::postgres::PgPoolOptions;
-//use std::collections::HashMap;
 
 // internal
 use userdb_core::update;
 use userdb_core::DB_URL;
-//use userdb_core::PhoneRow;
 use userdb_core::PhoneCategory;
 use userdb_core::Location;
 use userdb_core::prelude::*;
@@ -17,9 +15,9 @@ use userdb_core::update::phone::id::PhoneUpdate as PhoneUpdateById;
 use userdb_core::update::title::id::TitleUpdate as TitleUpdateById;
 use userdb_core::update::department::id::DepartmentUpdate as DepartmentUpdateById;
 
-//type RowMap = HashMap<Location, PhoneRow>;
 
-
+/// Process the request to update a `person` identified by their `id` in the 
+/// person table. 
 pub async fn process_update_person_by_id(
     id: i32, 
     first: Option<String>, 
@@ -58,6 +56,7 @@ pub async fn process_update_person_by_id(
     }
 
     
+/// Process the request to update a `person` identified by their `login`.
 pub async fn process_update_person_by_login(
     from_login: String, 
     first: Option<String>, 
@@ -95,6 +94,7 @@ pub async fn process_update_person_by_login(
     Ok(())
 }
 
+/// Process a request to update a phone, identified by its `id` in the `phone` table.
 pub async fn process_update_phone_by_id(
     // the phone's id
     id: i32, 
@@ -130,7 +130,7 @@ pub async fn process_update_phone_by_id(
     Ok(())
 }
 
-
+/// Process a reqeust to update a title identified by its `id` in the `title` table.
 pub async fn process_update_title_by_id(
     // the phone's id
     id: i32, 
@@ -156,7 +156,8 @@ pub async fn process_update_title_by_id(
     Ok(())
 }
 
-
+/// Process a request to update a department, identified by its `id` in 
+/// the `department` table.
 pub async fn process_update_dept_by_id(
     // the phone's id
     id: i32, 

@@ -12,9 +12,12 @@ use userdb_core::PhoneCategory;
 use userdb_core::Location;
 use userdb_core::NumberString;
 
-//
-// handle delete  record between an individual and a phone request
-//
+/// Process the request to delete a phone, identified by a user's login along iwth 
+/// the number, category, and location. This function will do the following things:
+/// - Remove association between the phone matching the `number`, `category`, and `location`, 
+///   and the user, identified by `login`.
+/// - Delete the phone record, as long as no additional releationships exist between the phone
+///   and another user. (Users may share extentions for instance)
 pub async fn process_delete_phone(
     login: &str, 
     number:&NumberString, 
@@ -34,9 +37,7 @@ pub async fn process_delete_phone(
     Ok(())
 }
 
-//
-// handle delete a phone by id request
-//
+/// Process a request to delete a phone entry provided its `id` in the phone table.
 pub async fn process_delete_phone_by_id(id: u32) -> Result<(), sqlx::Error> {
     let  pool = PgPoolOptions::new()
         .max_connections(1)
@@ -50,7 +51,8 @@ pub async fn process_delete_phone_by_id(id: u32) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
-
+/// Process the request to delete a department by name. This method will not 
+/// delete the department, should it be associated with one or more `person`s.
 pub async fn process_delete_dept(name: &str) -> Result<(), sqlx::Error> {
     let  pool = PgPoolOptions::new()
         .max_connections(1)
@@ -64,6 +66,9 @@ pub async fn process_delete_dept(name: &str) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
+/// Process request to delete a department given its `id` in the `department` table. This
+/// function will not attempt to delete the department if the department is associated with
+/// one or more `person`s.
 pub async fn process_delete_dept_by_id(id: u32) -> Result<(), sqlx::Error> {
     let  pool = PgPoolOptions::new()
         .max_connections(1)
@@ -77,7 +82,8 @@ pub async fn process_delete_dept_by_id(id: u32) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
-
+/// Process request to delete the supplied title. This will not succeed if the 
+/// `title` is in use by one or more `person`s.
 pub async fn process_delete_title(name: &str) -> Result<(), sqlx::Error> {
     let  pool = PgPoolOptions::new()
         .max_connections(1)
@@ -91,6 +97,8 @@ pub async fn process_delete_title(name: &str) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
+/// Process the request to delete a `title` by its `id` in the `title` table. This 
+/// will not succeed if the `title` is associated with one or more `person`s.
 pub async fn process_delete_title_by_id(id: u32) -> Result<(), sqlx::Error> {
     let  pool = PgPoolOptions::new()
         .max_connections(1)
@@ -104,7 +112,7 @@ pub async fn process_delete_title_by_id(id: u32) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
-
+/// Process request to delete a `person` by `login`.
 pub async fn process_delete_person(login: &str) -> Result<(), sqlx::Error> {
     let  pool = PgPoolOptions::new()
         .max_connections(1)
@@ -118,6 +126,7 @@ pub async fn process_delete_person(login: &str) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
+/// Process the request to delete a `person` by their `id` in the `person` table. 
 pub async fn process_delete_person_by_id(id: u32) -> Result<(), sqlx::Error> {
     let  pool = PgPoolOptions::new()
         .max_connections(1)

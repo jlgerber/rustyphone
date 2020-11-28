@@ -6,9 +6,12 @@ edition = "2018"
 
 
 [[bin]]
+name = "phoneutil"
+path = "src/bin/phoneutil.rs"
+
+[[bin]]
 name = "phone"
 path = "src/bin/main.rs"
-
 
 [dependencies]
 userdb_core = {path = "../userdb_core"}

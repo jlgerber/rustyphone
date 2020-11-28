@@ -1,24 +1,23 @@
 
 use colored::*;
 use sqlx::postgres::PgPoolOptions;
-//use std::collections::HashMap;
 
 // internal
 use userdb_core::create;
 use userdb_core::DB_URL;
-//use userdb_core::PhoneRow;
 use userdb_core::PhoneCategory;
 use userdb_core::Location;
 use userdb_core::NumberString;
 
-//type RowMap = HashMap<Location, PhoneRow>;
 
 //
 // handle create person request
 //
+
+/// Process the request to create a person, given required fields
 pub async fn process_create_person(
     first: &str, 
-    last:&str, 
+    last: &str, 
     login: &str, 
     department: &str, 
     title: &str
@@ -32,9 +31,7 @@ pub async fn process_create_person(
     Ok(())
 }
 
-//
-// handle create phone request
-//
+/// Process request to create a phone entry for an individual, specified via the login
 pub async fn process_create_phone(
     login: &str, 
     number:&NumberString, 
@@ -54,9 +51,7 @@ pub async fn process_create_phone(
     Ok(())
 }
 
-//
-// handle create title request
-//
+/// Process the request to create a new title
 pub async fn process_create_title(
     title: &str,     
 ) -> Result<(),sqlx::Error> {
@@ -77,9 +72,7 @@ pub async fn process_create_title(
     Ok(())
 }
 
-//
-// handle create department request
-//
+/// Process the request to create a new department
 pub async fn process_create_department(
     department: &str,     
 ) -> Result<(),sqlx::Error> {
