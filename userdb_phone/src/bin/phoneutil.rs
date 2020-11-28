@@ -1,3 +1,8 @@
+//! phoneutil command
+//! 
+//! Cli which exposes the full lifecycle for the phonedb.
+//! End users should use `phone`. 
+//! This command allows one to mutate the database. 
 use colored::*;
 use structopt::StructOpt;
 
